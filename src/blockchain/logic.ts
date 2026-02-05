@@ -1,4 +1,4 @@
-import type { Block, Transaction, BlockchainState } from './types';
+import type { Block } from './types';
 import { calculateBlockHash } from './crypto';
 
 export async function createGenesisBlock(): Promise<Block> {
@@ -9,10 +9,11 @@ export async function createGenesisBlock(): Promise<Block> {
     nonce: 0,
     previousHash: '0',
     difficulty: 0,
+    parentId: null,
   };
 
   const hash = await calculateBlockHash(genesisBlock as any);
-  return { ...genesisBlock, hash, id: 'genesis', parentId: null } as Block;
+  return { ...genesisBlock, hash, id: 'genesis' } as Block;
 }
 
 export async function validateBlock(
@@ -101,7 +102,7 @@ export function getChainPath(blocks: Record<string, Block>, tipId: string): Bloc
   let currentId: string | null = tipId;
 
   while (currentId) {
-    const block = blocks[currentId];
+    const block: Block = blocks[currentId];
     if (!block) break;
     path.unshift(block);
     currentId = block.parentId;

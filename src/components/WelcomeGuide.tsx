@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Info, X, Zap, Pickaxe, ShieldCheck } from 'lucide-react';
+import { X, Zap } from 'lucide-react';
 
 export const WelcomeGuide: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
