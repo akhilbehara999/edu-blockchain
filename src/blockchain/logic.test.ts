@@ -14,12 +14,17 @@ describe('Blockchain Logic', () => {
   });
 
   it('should invalidate a block with incorrect hash', async () => {
-    const genesis = await createGenesisBlock();
-    const tamperedBlock = {
-      ...genesis,
-      hash: 'wrong-hash'
+    const block: Block = {
+      id: 'block1',
+      parentId: 'genesis',
+      index: 1,
+      timestamp: Date.now(),
+      transactions: [],
+      previousHash: 'abc',
+      nonce: 0,
+      hash: 'wrong-hash',
     };
-    const validation = await validateBlock(tamperedBlock, null, 0);
+    const validation = await validateBlock(block, null, 0);
     expect(validation.isValid).toBe(false);
     expect(validation.error?.educational).toContain("fingerprint (hash) no longer matches");
   });
@@ -89,9 +94,11 @@ describe('Blockchain Logic', () => {
       [block2.id]: block2,
     };
 
-    // Tamper block 1
-    const tamperedBlock1 = { ...block1, transactions: [{ ...block1.transactions[0], amount: 999 }] };
-    tamperedBlock1.hash = await calculateBlockHash(tamperedBlock1);
+    // Tamper block 1 - Change data but DON'T recalculate hash to trigger hash mismatch
+    const tamperedBlock1 = {
+      ...block1,
+      transactions: [{ ...block1.transactions[0], amount: 999 }]
+    };
 
     const tamperedBlocks = {
       ...blocks,

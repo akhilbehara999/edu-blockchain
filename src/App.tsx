@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useStore } from './context/useStore';
 import { Header } from './components/Header';
 import { useMining } from './hooks/useMining';
+import confetti from 'canvas-confetti';
 import { validatePath, getLongestChainTip } from './blockchain/logic';
 import { Level1Hash } from './components/Level1Hash';
 import { Level2Transactions } from './components/Level2Transactions';
@@ -12,24 +13,27 @@ import { Home, PlusSquare, Pickaxe, RotateCcw } from 'lucide-react';
 import { clsx } from 'clsx';
 
 function App() {
-  const { blocks, tips, initialize, progress, resetLearningProgress, genesisId, difficulty } = useStore();
+  const { initialize, progress, resetLearningProgress, genesisId, isValid } = useStore();
   const { currentLevel } = progress;
   const { isMining } = useMining();
-  const [isValid, setIsValid] = useState(true);
+  const prevLevelRef = useRef(currentLevel);
 
   useEffect(() => {
     initialize();
   }, [initialize, genesisId]);
 
   useEffect(() => {
-    const checkValidity = async () => {
-      if (Object.keys(blocks).length === 0) return;
-      const tipId = getLongestChainTip({ blocks, tips });
-      const validation = await validatePath(blocks, tipId, difficulty);
-      setIsValid(validation.isValid);
-    };
-    checkValidity();
-  }, [blocks, tips, difficulty]);
+    if (prevLevelRef.current !== currentLevel) {
+      // Trigger confetti on level up
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#10b981', '#34d399', '#6ee7b7']
+      });
+      prevLevelRef.current = currentLevel;
+    }
+  }, [currentLevel]);
 
   const [activeTab, setActiveTab] = useState<'home' | 'tx' | 'mine'>('home');
 

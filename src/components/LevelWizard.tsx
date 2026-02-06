@@ -18,12 +18,6 @@ export const LevelWizard: React.FC<LevelWizardProps> = ({
   children,
 }) => {
   const handleNext = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#00ff88', '#00ffee', '#ffffff']
-    });
     onNext();
   };
 

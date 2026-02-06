@@ -6,27 +6,11 @@ import { Pickaxe, Database, AlertCircle, Settings2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export const MiningPanel: React.FC = () => {
-  const { mempool, blocks, selectedTipId, difficulty, addBlock, setDifficulty, progress } = useStore();
+  const { mempool, blocks, selectedTipId, difficulty, addBlock, setDifficulty, progress, isValid: isChainValid } = useStore();
   const { startMining, stopMining, isMining, progress: miningProgress } = useMining();
-  const [parentIsValid, setParentIsValid] = useState(true);
-  const [parentError, setParentError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkParent = async () => {
-      if (!selectedTipId || !blocks[selectedTipId]) return;
-
-      const block = blocks[selectedTipId];
-      const parentBlock = block.parentId ? blocks[block.parentId] : null;
-
-      const validation = await validateBlock(block, parentBlock, difficulty);
-      setParentIsValid(validation.isValid);
-      setParentError(validation.isValid ? null : validation.error?.educational || 'Invalid parent block');
-    };
-    checkParent();
-  }, [selectedTipId, blocks]);
 
   const handleMine = async () => {
-    if (mempool.length === 0 || !selectedTipId || !parentIsValid) return;
+    if (mempool.length === 0 || !selectedTipId || !isChainValid) return;
 
     const lastBlock = blocks[selectedTipId];
     if (!lastBlock) return;
@@ -134,13 +118,13 @@ export const MiningPanel: React.FC = () => {
               </p>
             </div>
 
-            {!parentIsValid && (
+            {!isChainValid && (
               <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Cannot Mine</p>
-                  <p className="text-xs text-neutral-300 leading-relaxed">
-                    {parentError} Fix the chain or mine from a valid block tip.
+                  <p className="text-xs text-neutral-300 leading-relaxed font-bold">
+                    Chain is broken. You cannot extend invalid history.
                   </p>
                 </div>
               </div>
@@ -148,7 +132,7 @@ export const MiningPanel: React.FC = () => {
 
             <button
               onClick={handleMine}
-              disabled={mempool.length === 0 || !selectedTipId || !parentIsValid}
+              disabled={mempool.length === 0 || !selectedTipId || !isChainValid}
               className="flex w-full items-center justify-center gap-3 rounded-xl bg-brand-primary py-4 text-lg font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-20 active:scale-[0.98]"
             >
               <Pickaxe className="h-5 w-5" />

@@ -12,9 +12,7 @@ interface VerticalTimelineProps {
 }
 
 export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanations = false }) => {
-  const { blocks, tips, selectedTipId, difficulty } = useStore();
-  const [validationErrors, setValidationErrors] = useState<Record<string, BlockValidationError>>({});
-  const [firstInvalidId, setFirstInvalidId] = useState<string | null>(null);
+  const { blocks, tips, selectedTipId, difficulty, validationErrors, firstInvalidBlockId: firstInvalidId } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const blockRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -24,23 +22,14 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
   }, [blocks, tips, selectedTipId]);
 
   useEffect(() => {
-    const validateAll = async () => {
-      if (chainPath.length === 0) return;
-      const lastBlockId = chainPath[chainPath.length - 1].id;
-      const validation = await validatePath(blocks, lastBlockId, difficulty);
-      setValidationErrors(validation.errors);
-      setFirstInvalidId(validation.firstInvalidBlockId);
-
-      // Auto-scroll to the first invalid block
-      if (validation.firstInvalidBlockId && blockRefs.current[validation.firstInvalidBlockId]) {
-        blockRefs.current[validation.firstInvalidBlockId!]?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }
-    };
-    validateAll();
-  }, [blocks, chainPath, difficulty]);
+    // Auto-scroll to the first invalid block
+    if (firstInvalidId && blockRefs.current[firstInvalidId]) {
+      blockRefs.current[firstInvalidId]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }, [firstInvalidId]);
 
   if (chainPath.length === 0) {
     return (
@@ -78,7 +67,7 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
               <React.Fragment key={block.id}>
                 <div
                   ref={el => blockRefs.current[block.id] = el}
-                  className="w-full h-[100dvh] flex items-center justify-center p-4 snap-start relative"
+                  className="w-full h-[calc(100dvh-3.5rem)] flex items-center justify-center p-4 snap-start relative"
                 >
                   <motion.div
                     animate={isFirstInvalid ? {
@@ -107,22 +96,26 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
                 {index < chainPath.length - 1 && (
                   <div className="relative flex flex-col items-center w-full">
                     {isInvalid && !prevIsInvalid ? (
-                      <div className="h-32 w-full flex flex-col items-center justify-center gap-2">
-                        <div className="h-full w-0.5 bg-gradient-to-b from-neutral-800 to-red-500/50" />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="h-32 w-full flex flex-col items-center justify-center gap-2"
+                      >
+                        <div className="h-full w-0.5 bg-gradient-to-b from-neutral-800 to-red-500" />
                         <div className="flex flex-col items-center gap-2">
-                          <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/30">
-                            <Link2Off className="h-4 w-4 text-red-500" />
+                          <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-red-500/20 border-2 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+                            <Link2Off className="h-4 w-4 text-red-500 animate-pulse" />
                             <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Chain Broken</span>
                           </div>
-                          <p className="text-[9px] text-red-500/60 font-medium uppercase tracking-tighter">
+                          <p className="text-[9px] text-red-500 font-bold uppercase tracking-tighter text-center max-w-[200px]">
                             {validationErrors[block.id]?.educational.split('.')[0]}.
                           </p>
                         </div>
-                        <div className="h-full w-0.5 bg-gradient-to-b from-red-500/50 to-red-900/50" />
-                      </div>
+                        <div className="h-full w-0.5 bg-gradient-to-b from-red-500 to-red-900" />
+                      </motion.div>
                     ) : (
                       <div className={clsx(
-                        "h-16 w-0.5 flex-shrink-0",
+                        "h-16 w-0.5 flex-shrink-0 transition-colors duration-500",
                         isInvalid ? "bg-red-900/50" : "bg-neutral-800"
                       )} />
                     )}
