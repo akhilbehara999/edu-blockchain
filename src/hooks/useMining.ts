@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import type { Transaction, Block } from '../blockchain/types';
+import type { Transaction } from '../blockchain/types';
 
 interface MiningProgress {
   nonce: number;

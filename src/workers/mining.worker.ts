@@ -26,8 +26,6 @@ self.onmessage = async (e: MessageEvent) => {
   let nonce = 0;
   let hash = '';
 
-  const startTime = Date.now();
-
   while (true) {
     hash = await calculateHash(index, timestamp, transactions, nonce, previousHash);
 
