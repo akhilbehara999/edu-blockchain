@@ -5,7 +5,8 @@ import { LevelWizard } from './LevelWizard';
 import { VerticalTimeline } from './VerticalTimeline';
 
 export const Level4Chain: React.FC = () => {
-  const { setLearningLevel, isValid } = useStore();
+  const setLearningLevel = useStore(state => state.setLearningLevel);
+  const isValid = useStore(state => state.isValid);
 
   return (
     <LevelWizard
