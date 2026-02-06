@@ -5,7 +5,8 @@ import { LevelWizard } from './LevelWizard';
 import { VerticalTimeline } from './VerticalTimeline';
 
 export const Level4Chain: React.FC = () => {
-  const { setLearningLevel, hasTamperedBlock } = useStore();
+  const { setLearningLevel, progress } = useStore();
+  const { hasTamperedBlock } = progress;
 
   return (
     <LevelWizard

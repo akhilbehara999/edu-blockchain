@@ -1,8 +1,8 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { useStore } from '../context/useStore';
-import { getChainPath, getLongestChainTip, validatePath } from '../blockchain/logic';
+import { getChainPath, getLongestChainTip, validatePath, type BlockValidationError } from '../blockchain/logic';
 import { BlockCard } from './BlockCard';
-import { AlertTriangle, ArrowDown } from 'lucide-react';
+import { AlertTriangle, ArrowDown, Link2Off } from 'lucide-react';
 import { ExplainThis } from './ExplainThis';
 
 interface VerticalTimelineProps {
@@ -11,10 +11,13 @@ interface VerticalTimelineProps {
 
 export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanations = false }) => {
   const { blocks, tips, selectedTipId } = useStore();
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, BlockValidationError>>({});
+  const [firstInvalidId, setFirstInvalidId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const blockRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const chainPath = useMemo(() => {
-    const tipId = selectedTipId || getLongestChainTip({ blocks, tips } as any);
+    const tipId = selectedTipId || getLongestChainTip({ blocks, tips });
     return getChainPath(blocks, tipId);
   }, [blocks, tips, selectedTipId]);
 
@@ -24,6 +27,17 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
       const lastBlockId = chainPath[chainPath.length - 1].id;
       const validation = await validatePath(blocks, lastBlockId);
       setValidationErrors(validation.errors);
+      setFirstInvalidId(validation.firstInvalidBlockId);
+
+      // Auto-scroll to the first invalid block
+      if (validation.firstInvalidBlockId && blockRefs.current[validation.firstInvalidBlockId]) {
+        setTimeout(() => {
+          blockRefs.current[validation.firstInvalidBlockId!]?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }, 300);
+      }
     };
     validateAll();
   }, [blocks, chainPath]);
@@ -39,7 +53,10 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="flex-1 overflow-y-auto snap-y snap-mandatory pb-32">
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-y-auto snap-y snap-mandatory pb-64"
+      >
         {!hideExplanations && (
           <div className="px-4 pt-4">
             <ExplainThis
@@ -52,42 +69,61 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
           </div>
         )}
         <div className="flex flex-col items-center gap-0">
-          {chainPath.map((block, index) => (
-            <React.Fragment key={block.id}>
-              <div className="w-full min-h-[80vh] flex items-center justify-center p-4 snap-start">
-                <div className="w-full max-w-md">
-                  <BlockCard
-                    block={block}
-                    isValid={!validationErrors[block.id]}
-                    error={validationErrors[block.id]}
-                    isGenesis={block.index === 0}
-                  />
+          {chainPath.map((block, index) => {
+            const isInvalid = !!validationErrors[block.id];
+            const isFirstInvalid = block.id === firstInvalidId;
+            const prevIsInvalid = index > 0 && !!validationErrors[chainPath[index-1].id];
 
-                  {!validationErrors[block.id] && index < chainPath.length - 1 && (
-                    <div className="mt-8 flex flex-col items-center animate-bounce">
-                      <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-2">Next Block</span>
-                      <ArrowDown className="h-5 w-5 text-neutral-700" />
-                    </div>
-                  )}
+            return (
+              <React.Fragment key={block.id}>
+                <div
+                  ref={el => blockRefs.current[block.id] = el}
+                  className="w-full h-[100dvh] flex items-center justify-center p-4 snap-start relative"
+                >
+                  <div className="w-full max-w-md">
+                    <BlockCard
+                      block={block}
+                      isValid={!isInvalid}
+                      error={validationErrors[block.id]}
+                      isGenesis={block.index === 0}
+                    />
 
-                  {validationErrors[block.id] && (
-                    <div className="mt-4 rounded-xl bg-red-500/10 border border-red-500/20 p-4 animate-in fade-in zoom-in duration-300">
-                      <p className="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">Why is this broken?</p>
-                      <p className="text-sm text-neutral-300">
-                        {index > 0 && validationErrors[chainPath[index-1]?.id]
-                          ? "The previous block is invalid, breaking the chain's integrity."
-                          : validationErrors[block.id]}
-                      </p>
-                    </div>
-                  )}
+                    {!isInvalid && index < chainPath.length - 1 && (
+                      <div className="mt-12 flex flex-col items-center animate-bounce">
+                        <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-2">Next Block</span>
+                        <ArrowDown className="h-5 w-5 text-neutral-700" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {index < chainPath.length - 1 && (
-                <div className="h-12 w-0.5 bg-neutral-800 flex-shrink-0" />
-              )}
-            </React.Fragment>
-          ))}
+                {index < chainPath.length - 1 && (
+                  <div className="relative flex flex-col items-center w-full">
+                    {isInvalid && !prevIsInvalid ? (
+                      <div className="h-32 w-full flex flex-col items-center justify-center gap-2">
+                        <div className="h-full w-0.5 bg-gradient-to-b from-neutral-800 to-red-500/50" />
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/30">
+                            <Link2Off className="h-4 w-4 text-red-500" />
+                            <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Chain Broken</span>
+                          </div>
+                          <p className="text-[9px] text-red-500/60 font-medium uppercase tracking-tighter">
+                            {validationErrors[block.id]?.educational.split('.')[0]}.
+                          </p>
+                        </div>
+                        <div className="h-full w-0.5 bg-gradient-to-b from-red-500/50 to-red-900/50" />
+                      </div>
+                    ) : (
+                      <div className={clsx(
+                        "h-16 w-0.5 flex-shrink-0",
+                        isInvalid ? "bg-red-900/50" : "bg-neutral-800"
+                      )} />
+                    )}
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
       </div>
     </div>

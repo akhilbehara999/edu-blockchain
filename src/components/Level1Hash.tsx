@@ -6,7 +6,8 @@ import { LevelWizard } from './LevelWizard';
 import { Fingerprint } from 'lucide-react';
 
 export const Level1Hash: React.FC = () => {
-  const { setLearningLevel, setHasChangedHashInput, hasChangedHashInput } = useStore();
+  const { setLearningLevel, recordHashChange, progress } = useStore();
+  const { hashChanges } = progress;
   const [input, setInput] = useState('');
   const [hash, setHash] = useState('');
 
@@ -20,16 +21,14 @@ export const Level1Hash: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    if (!hasChangedHashInput && e.target.value !== '') {
-      setHasChangedHashInput(true);
-    }
+    recordHashChange();
   };
 
   return (
     <LevelWizard
       level="hash"
       title="1. The Digital Fingerprint"
-      canProgress={hasChangedHashInput}
+      canProgress={hashChanges >= 2}
       onNext={() => setLearningLevel('transactions')}
     >
       <ExplainThis
@@ -63,9 +62,9 @@ export const Level1Hash: React.FC = () => {
           </div>
         </div>
 
-        {!hasChangedHashInput && (
+        {hashChanges < 2 && (
           <p className="text-center text-sm text-neutral-500 italic">
-            Modify the input to unlock the next step
+            Modify the input at least twice ({hashChanges}/2) to unlock the next step
           </p>
         )}
       </div>

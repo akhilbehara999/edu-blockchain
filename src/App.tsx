@@ -12,7 +12,8 @@ import { Home, PlusSquare, Pickaxe, RotateCcw } from 'lucide-react';
 import { clsx } from 'clsx';
 
 function App() {
-  const { blocks, tips, initialize, currentLevel, resetLearningProgress, genesisId } = useStore();
+  const { blocks, tips, initialize, progress, resetLearningProgress, genesisId } = useStore();
+  const { currentLevel } = progress;
   const { isMining } = useMining();
   const [isValid, setIsValid] = useState(true);
 
@@ -23,7 +24,7 @@ function App() {
   useEffect(() => {
     const checkValidity = async () => {
       if (Object.keys(blocks).length === 0) return;
-      const tipId = getLongestChainTip({ blocks, tips } as any);
+      const tipId = getLongestChainTip({ blocks, tips });
       const validation = await validatePath(blocks, tipId);
       setIsValid(validation.isValid);
     };

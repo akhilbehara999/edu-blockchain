@@ -21,7 +21,7 @@ describe('Blockchain Logic', () => {
     };
     const validation = await validateBlock(tamperedBlock, null, 0);
     expect(validation.isValid).toBe(false);
-    expect(validation.error).toContain('Hash integrity check failed');
+    expect(validation.error?.educational).toContain("fingerprint (hash) no longer matches");
   });
 
   it('should validate a path of blocks', async () => {
@@ -95,7 +95,6 @@ describe('Blockchain Logic', () => {
     // Tamper block 1
     const tamperedBlock1 = { ...block1, transactions: [{ ...block1.transactions[0], amount: 999 }] };
     tamperedBlock1.hash = await calculateBlockHash(tamperedBlock1);
-    console.log('Tampered Hash:', tamperedBlock1.hash);
 
     const tamperedBlocks = {
       ...blocks,
@@ -105,6 +104,7 @@ describe('Blockchain Logic', () => {
     const validation = await validatePath(tamperedBlocks, block2.id);
     expect(validation.isValid).toBe(false);
     expect(validation.errors[block1.id]).toBeDefined(); // Tampered
-    expect(validation.errors[block2.id]).toBe('Previous block in chain is invalid'); // Ripple effect
+    expect(validation.errors[block2.id].educational).toBe('This block is broken because the block before it is invalid. Chains are only as strong as their weakest link.'); // Ripple effect
+    expect(validation.firstInvalidBlockId).toBe(block1.id);
   });
 });
