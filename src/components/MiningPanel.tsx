@@ -122,9 +122,9 @@ export const MiningPanel: React.FC = () => {
               <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Cannot Mine</p>
+                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Mining Disabled</p>
                   <p className="text-xs text-neutral-300 leading-relaxed font-bold">
-                    Chain is broken. You cannot extend invalid history.
+                    The chain is broken at an earlier block. You must fix the chain or reset before you can mine new blocks.
                   </p>
                 </div>
               </div>

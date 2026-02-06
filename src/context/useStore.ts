@@ -103,7 +103,7 @@ export const useStore = create<AppState>()(
       addTransaction: (tx) => {
         const { progress } = get();
         if (progress.currentLevel === 'hash') {
-          return { success: false, error: "Complete the Hash stage before adding transactions." };
+          return { success: false, error: "STAGES_LOCKED" };
         }
 
         const newTx: Transaction = {
@@ -124,11 +124,16 @@ export const useStore = create<AppState>()(
         const { progress, isValid } = get();
 
         if (progress.currentLevel === 'hash' || progress.currentLevel === 'transactions') {
-          return { success: false, error: "Mining is not yet unlocked." };
+          return { success: false, error: "MINING_LOCKED" };
         }
 
         if (!isValid) {
-          return { success: false, error: "Chain is broken. You cannot extend invalid history." };
+          return { success: false, error: "CHAIN_BROKEN" };
+        }
+
+        // In learning stages, we can only mine on the latest tip
+        if (progress.currentLevel !== 'completed' && blockData.parentId !== get().lastBlockId) {
+            return { success: false, error: "MUST_MINE_ON_TIP" };
         }
 
         const id = blockData.id || Math.random().toString(36).substring(2, 9);
@@ -158,19 +163,22 @@ export const useStore = create<AppState>()(
           };
         });
 
-        get().updateChainValidity();
         return { success: true };
       },
 
       tamperBlock: async (id, tamperedTransactions) => {
-        const { blocks, genesisId } = get();
+        const { blocks, genesisId, progress } = get();
 
         if (id === genesisId) {
-          return { success: false, error: "Genesis block is untouchable." };
+          return { success: false, error: "GENESIS_UNTOUCHABLE" };
+        }
+
+        if (progress.currentLevel !== 'chain' && progress.currentLevel !== 'completed') {
+            return { success: false, error: "TAMPERING_LOCKED" };
         }
 
         const block = blocks[id];
-        if (!block) return { success: false, error: "Block not found." };
+        if (!block) return { success: false, error: "BLOCK_NOT_FOUND" };
 
         const { calculateBlockHash } = await import('../blockchain/crypto');
 
@@ -188,24 +196,24 @@ export const useStore = create<AppState>()(
           progress: { ...state.progress, hasTamperedBlock: true }
         }));
 
-        await get().updateChainValidity();
         return { success: true };
       },
 
       setDifficulty: (difficulty) => {
         const { progress } = get();
         if (progress.currentLevel !== 'completed') {
-          return { success: false, error: "Difficulty can only be changed in the final stage." };
+          return { success: false, error: "DIFFICULTY_LOCKED" };
         }
         set({ difficulty });
-        get().updateChainValidity();
         return { success: true };
       },
 
       setSelectedTipId: (id) => set({ selectedTipId: id }),
 
       resetChain: async () => {
+        const { progress } = get();
         const genesis = await createGenesisBlock();
+
         set({
           blocks: { [genesis.id]: genesis },
           tips: [genesis.id],
@@ -216,6 +224,15 @@ export const useStore = create<AppState>()(
           isValid: true,
           firstInvalidBlockId: null,
           validationErrors: {},
+          // Reset learning state unless in completed mode
+          progress: progress.currentLevel === 'completed' ? progress : {
+            currentLevel: 'hash',
+            hashChanges: 0,
+            lastCalculatedHash: '',
+            hasAddedTransaction: false,
+            hasMinedFirstBlock: false,
+            hasTamperedBlock: false,
+          }
         });
       },
 

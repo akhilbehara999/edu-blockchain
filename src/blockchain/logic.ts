@@ -88,6 +88,12 @@ export async function validatePath(
   let pathIsValid = true;
   for (let i = 0; i < path.length; i++) {
     const block = path[i];
+
+    // Genesis block is untouchable and valid by definition
+    if (isGenesisBlock(block)) {
+      continue;
+    }
+
     const previousBlock = i === 0 ? null : path[i - 1];
 
     if (!pathIsValid) {

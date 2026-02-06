@@ -7,7 +7,8 @@ import { Mempool } from './Mempool';
 
 export const Level2Transactions: React.FC = () => {
   const { setLearningLevel, progress } = useStore();
-  const { hasAddedTransaction } = progress;
+  const { hasAddedTransaction, currentLevel } = progress;
+  const isCompleted = currentLevel === 'completed';
 
   return (
     <LevelWizard
@@ -31,7 +32,7 @@ export const Level2Transactions: React.FC = () => {
           <Mempool />
         </div>
 
-        {!hasAddedTransaction && (
+        {!isCompleted && !hasAddedTransaction && (
           <p className="text-center text-sm text-neutral-500 italic">
             Add at least one transaction to continue
           </p>
