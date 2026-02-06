@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useStore } from '../context/useStore';
+import { useStore, isStepCompleted } from '../context/useStore';
 import { calculateHash } from '../blockchain/crypto';
 import { ExplainThis } from './ExplainThis';
 import { LevelWizard } from './LevelWizard';
@@ -7,7 +7,8 @@ import { Fingerprint } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export const Level1Hash: React.FC = () => {
-  const { setLearningLevel, recordHashChange, progress } = useStore();
+  const store = useStore();
+  const { setLearningLevel, recordHashChange, progress } = store;
   const { hashChanges } = progress;
   const [input, setInput] = useState('');
   const [hash, setHash] = useState('');
@@ -32,11 +33,13 @@ export const Level1Hash: React.FC = () => {
 
   const lastHash = progress.lastCalculatedHash;
 
+  const canProgress = isStepCompleted('hash', store);
+
   return (
     <LevelWizard
       level="hash"
       title="1. The Digital Fingerprint"
-      canProgress={hashChanges >= 2}
+      canProgress={canProgress}
       onNext={() => setLearningLevel('transactions')}
     >
       <ExplainThis

@@ -1,18 +1,19 @@
 import React from 'react';
-import { useStore } from '../context/useStore';
+import { useStore, isStepCompleted } from '../context/useStore';
 import { ExplainThis } from './ExplainThis';
 import { LevelWizard } from './LevelWizard';
 import { VerticalTimeline } from './VerticalTimeline';
 
 export const Level4Chain: React.FC = () => {
-  const setLearningLevel = useStore(state => state.setLearningLevel);
-  const isValid = useStore(state => state.isValid);
+  const store = useStore();
+  const { setLearningLevel, isValid } = store;
+  const canProgress = isStepCompleted('chain', store);
 
   return (
     <LevelWizard
       level="chain"
       title="4. The Immutable Chain"
-      canProgress={!isValid}
+      canProgress={canProgress}
       onNext={() => setLearningLevel('completed')}
     >
       <ExplainThis

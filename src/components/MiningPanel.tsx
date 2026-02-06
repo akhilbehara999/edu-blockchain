@@ -7,9 +7,12 @@ import { clsx } from 'clsx';
 export const MiningPanel: React.FC = () => {
   const { mempool, blocks, selectedTipId, difficulty, addBlock, setDifficulty, progress, isValid: isChainValid } = useStore();
   const { startMining, stopMining, isMining, progress: miningProgress } = useMining();
+  const [error, setError] = React.useState<string | null>(null);
 
   const handleMine = async () => {
-    if (mempool.length === 0 || !selectedTipId || !isChainValid) return;
+    setError(null);
+    const canMine = mempool.length > 0 && selectedTipId && (isChainValid || progress.currentLevel === 'mining');
+    if (!canMine) return;
 
     const lastBlock = blocks[selectedTipId];
     if (!lastBlock) return;
@@ -27,7 +30,7 @@ export const MiningPanel: React.FC = () => {
         difficulty
       );
 
-      addBlock({
+      const response = await addBlock({
         index,
         timestamp,
         transactions: mempool,
@@ -36,7 +39,13 @@ export const MiningPanel: React.FC = () => {
         hash: result.hash,
         parentId: selectedTipId,
       });
+
+      if (!response.success) {
+        setError(response.error || 'Failed to add block');
+        console.error('Add block failed:', response.error);
+      }
     } catch (err) {
+      setError('Mining process failed');
       console.error('Mining failed', err);
     }
   };
@@ -117,7 +126,7 @@ export const MiningPanel: React.FC = () => {
               </p>
             </div>
 
-            {!isChainValid && (
+            {(!isChainValid && progress.currentLevel !== 'mining') && (
               <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
                 <div className="space-y-1">
@@ -129,9 +138,21 @@ export const MiningPanel: React.FC = () => {
               </div>
             )}
 
+            {error && (
+              <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Error</p>
+                  <p className="text-xs text-neutral-300 leading-relaxed font-bold">
+                    {error}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handleMine}
-              disabled={mempool.length === 0 || !selectedTipId || !isChainValid}
+              disabled={mempool.length === 0 || !selectedTipId || (!isChainValid && progress.currentLevel !== 'mining')}
               className="flex w-full items-center justify-center gap-3 rounded-xl bg-brand-primary py-4 text-lg font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-20 active:scale-[0.98]"
             >
               <Pickaxe className="h-5 w-5" />

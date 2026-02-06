@@ -22,13 +22,20 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
   const [showTechnical, setShowTechnical] = useState(currentLevel === 'completed');
   const [tamperedTxs, setTamperedTxs] = useState<Transaction[]>(block.transactions);
   const [isShaking, setIsShaking] = useState(false);
+  const [tamperError, setTamperError] = useState<string | null>(null);
 
   const handleTamper = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    setTamperError(null);
     setIsShaking(true);
     setTimeout(() => setIsShaking(false), 500);
-    await tamperBlock(block.id, tamperedTxs);
-    setIsEditing(false);
+    const result = await tamperBlock(block.id, tamperedTxs);
+    if (result.success) {
+      setIsEditing(false);
+    } else {
+      setTamperError(result.error || 'Failed to tamper with block');
+      console.error('Tamper block failed:', result.error);
+    }
   };
 
   const updateTx = (index: number, field: keyof Transaction, value: string | number) => {
@@ -148,6 +155,11 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
                  {isEditing ? (
                   <div className="space-y-3 rounded-xl bg-amber-500/5 p-3 border border-amber-500/20">
                     <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-2">Tampering Mode</p>
+                    {tamperError && (
+                      <div className="text-[10px] font-bold text-red-500 mb-2">
+                        {tamperError}
+                      </div>
+                    )}
                     {tamperedTxs.map((tx, idx) => (
                       <div key={tx.id} className="space-y-2 border-b border-neutral-800 pb-2 last:border-0">
                         <div className="grid grid-cols-2 gap-2">

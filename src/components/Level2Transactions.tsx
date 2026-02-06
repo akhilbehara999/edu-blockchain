@@ -1,20 +1,22 @@
 import React from 'react';
-import { useStore } from '../context/useStore';
+import { useStore, isStepCompleted } from '../context/useStore';
 import { ExplainThis } from './ExplainThis';
 import { LevelWizard } from './LevelWizard';
 import { TransactionForm } from './TransactionForm';
 import { Mempool } from './Mempool';
 
 export const Level2Transactions: React.FC = () => {
-  const { setLearningLevel, progress } = useStore();
+  const store = useStore();
+  const { setLearningLevel, progress } = store;
   const { hasAddedTransaction, currentLevel } = progress;
   const isCompleted = currentLevel === 'completed';
+  const canProgress = isStepCompleted('transactions', store);
 
   return (
     <LevelWizard
       level="transactions"
       title="2. Transactions & Mempool"
-      canProgress={hasAddedTransaction}
+      canProgress={canProgress}
       onNext={() => setLearningLevel('mining')}
     >
       <ExplainThis

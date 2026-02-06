@@ -1,19 +1,21 @@
 import React from 'react';
-import { useStore } from '../context/useStore';
+import { useStore, isStepCompleted } from '../context/useStore';
 import { ExplainThis } from './ExplainThis';
 import { LevelWizard } from './LevelWizard';
 import { MiningPanel } from './MiningPanel';
 
 export const Level3Mining: React.FC = () => {
-  const { setLearningLevel, progress } = useStore();
+  const store = useStore();
+  const { setLearningLevel, progress } = store;
   const { hasMinedFirstBlock, currentLevel } = progress;
   const isCompleted = currentLevel === 'completed';
+  const canProgress = isStepCompleted('mining', store);
 
   return (
     <LevelWizard
       level="mining"
       title="3. The Mining Race"
-      canProgress={hasMinedFirstBlock}
+      canProgress={canProgress}
       onNext={() => setLearningLevel('chain')}
     >
       <ExplainThis
