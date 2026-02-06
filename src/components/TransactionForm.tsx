@@ -7,19 +7,22 @@ export const TransactionForm: React.FC = () => {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     if (!from || !to || !amount) return;
 
-    const result = addTransaction({
+    const result = await addTransaction({
       from,
       to,
       amount: parseFloat(amount),
     });
 
     if (!result.success) {
-      alert(result.error);
+      setError(result.error || 'Failed to add transaction');
+      console.error('Add transaction failed:', result.error);
       return;
     }
 
@@ -36,6 +39,11 @@ export const TransactionForm: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-500">
+            {error}
+          </div>
+        )}
         <div>
           <label className="mb-1.5 block text-xs font-medium text-neutral-400">Sender</label>
           <input

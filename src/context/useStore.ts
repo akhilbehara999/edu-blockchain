@@ -11,6 +11,7 @@ export interface LearningProgress {
   lastCalculatedHash: string;
   hasAddedTransaction: boolean;
   hasMinedFirstBlock: boolean;
+  hasTamperedBlock: boolean;
 }
 
 interface AppState extends BlockchainState {
@@ -22,11 +23,11 @@ interface AppState extends BlockchainState {
   progress: LearningProgress;
 
   // Actions
-  addTransaction: (tx: Omit<Transaction, 'id' | 'timestamp'>) => { success: boolean; error?: string };
+  addTransaction: (tx: Omit<Transaction, 'id' | 'timestamp'>) => Promise<{ success: boolean; error?: string }>;
   clearMempool: () => void;
-  addBlock: (blockData: Omit<Block, 'id'> & { id?: string }) => { success: boolean; error?: string };
+  addBlock: (blockData: Omit<Block, 'id'> & { id?: string }) => Promise<{ success: boolean; error?: string }>;
   tamperBlock: (id: string, tamperedTransactions: Transaction[]) => Promise<{ success: boolean; error?: string }>;
-  setDifficulty: (difficulty: number) => { success: boolean; error?: string };
+  setDifficulty: (difficulty: number) => Promise<{ success: boolean; error?: string }>;
   setSelectedTipId: (id: string | null) => void;
   resetChain: () => Promise<void>;
   initialize: () => Promise<void>;
@@ -39,6 +40,45 @@ interface AppState extends BlockchainState {
   firstInvalidBlockId: string | null;
   validationErrors: Record<string, import('../blockchain/logic').BlockValidationError>;
 }
+
+/**
+ * Logic-only selectors for progression and permissions
+ */
+export const isActionAllowed = (action: 'addTransaction' | 'addBlock' | 'tamperBlock' | 'setDifficulty', state: AppState): boolean => {
+  const { currentLevel } = state.progress;
+  if (currentLevel === 'completed') return true;
+
+  switch (action) {
+    case 'addTransaction':
+      return currentLevel !== 'hash';
+    case 'addBlock':
+      return ['mining', 'chain'].includes(currentLevel);
+    case 'tamperBlock':
+      return currentLevel === 'chain';
+    case 'setDifficulty':
+      return false;
+    default:
+      return false;
+  }
+};
+
+export const isStepCompleted = (level: LearningLevel, state: AppState): boolean => {
+  const { progress } = state;
+  switch (level) {
+    case 'hash':
+      return progress.hashChanges >= 2;
+    case 'transactions':
+      return progress.hasAddedTransaction;
+    case 'mining':
+      return progress.hasMinedFirstBlock;
+    case 'chain':
+      return progress.hasTamperedBlock;
+    case 'completed':
+      return false;
+    default:
+      return false;
+  }
+};
 
 export const useStore = create<AppState>()(
   persist(
@@ -61,6 +101,7 @@ export const useStore = create<AppState>()(
         lastCalculatedHash: '',
         hasAddedTransaction: false,
         hasMinedFirstBlock: false,
+        hasTamperedBlock: false,
       },
 
       initialize: async () => {
@@ -98,9 +139,8 @@ export const useStore = create<AppState>()(
         });
       },
 
-      addTransaction: (tx) => {
-        const { progress } = get();
-        if (progress.currentLevel === 'hash') {
+      addTransaction: async (tx) => {
+        if (!isActionAllowed('addTransaction', get())) {
           return { success: false, error: "STAGES_LOCKED" };
         }
 
@@ -113,19 +153,22 @@ export const useStore = create<AppState>()(
           mempool: [...state.mempool, newTx],
           progress: { ...state.progress, hasAddedTransaction: true }
         }));
+        await get().updateChainValidity();
         return { success: true };
       },
 
       clearMempool: () => set({ mempool: [] }),
 
-      addBlock: (blockData) => {
-        const { progress, isValid } = get();
+      addBlock: async (blockData) => {
+        const state = get();
+        const { progress, isValid } = state;
 
-        if (progress.currentLevel === 'hash' || progress.currentLevel === 'transactions') {
+        if (!isActionAllowed('addBlock', state)) {
           return { success: false, error: "MINING_LOCKED" };
         }
 
-        if (!isValid) {
+        // Block mining if chain is broken, UNLESS we are in the mining learning step
+        if (!isValid && progress.currentLevel !== 'mining') {
           return { success: false, error: "CHAIN_BROKEN" };
         }
 
@@ -161,17 +204,19 @@ export const useStore = create<AppState>()(
           };
         });
 
+        await get().updateChainValidity();
         return { success: true };
       },
 
       tamperBlock: async (id, tamperedTransactions) => {
-        const { blocks, genesisId, progress } = get();
+        const state = get();
+        const { blocks, genesisId } = state;
 
         if (id === genesisId) {
           return { success: false, error: "GENESIS_UNTOUCHABLE" };
         }
 
-        if (progress.currentLevel !== 'chain' && progress.currentLevel !== 'completed') {
+        if (!isActionAllowed('tamperBlock', state)) {
             return { success: false, error: "TAMPERING_LOCKED" };
         }
 
@@ -190,18 +235,23 @@ export const useStore = create<AppState>()(
           blocks: {
             ...state.blocks,
             [id]: tamperedBlock
+          },
+          progress: {
+            ...state.progress,
+            hasTamperedBlock: true
           }
         }));
 
+        await get().updateChainValidity();
         return { success: true };
       },
 
-      setDifficulty: (difficulty) => {
-        const { progress } = get();
-        if (progress.currentLevel !== 'completed') {
+      setDifficulty: async (difficulty) => {
+        if (!isActionAllowed('setDifficulty', get())) {
           return { success: false, error: "DIFFICULTY_LOCKED" };
         }
         set({ difficulty });
+        await get().updateChainValidity();
         return { success: true };
       },
 
@@ -238,38 +288,10 @@ export const useStore = create<AppState>()(
         const currentIndex = levels.indexOf(state.progress.currentLevel);
         const targetIndex = levels.indexOf(level);
 
-        // ALWAYS allow transitioning from chain to completed if called,
-        // to bypass any potential state synchronization issues in the final step.
-        if (state.progress.currentLevel === 'chain' && level === 'completed') {
-          return {
-            progress: { ...state.progress, currentLevel: 'completed' }
-          };
-        }
-
         // Can only progress to the next level
         if (targetIndex !== currentIndex + 1) return state;
 
-        // Validation criteria for each transition
-        let canProgress = false;
-
-        switch (state.progress.currentLevel) {
-          case 'hash':
-            canProgress = state.progress.hashChanges >= 2;
-            break;
-          case 'transactions':
-            canProgress = state.progress.hasAddedTransaction;
-            break;
-          case 'mining':
-            canProgress = state.progress.hasMinedFirstBlock;
-            break;
-          case 'chain':
-            canProgress = !state.isValid;
-            break;
-          default:
-            canProgress = false;
-        }
-
-        if (canProgress) {
+        if (isStepCompleted(state.progress.currentLevel, state)) {
           return {
             progress: { ...state.progress, currentLevel: level }
           };
@@ -296,6 +318,7 @@ export const useStore = create<AppState>()(
             lastCalculatedHash: '',
             hasAddedTransaction: false,
             hasMinedFirstBlock: false,
+            hasTamperedBlock: false,
           },
           blocks: {},
           tips: [],
