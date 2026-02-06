@@ -71,10 +71,6 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
                   <span className="text-[10px] text-neutral-500 uppercase font-bold">Hash:</span>
                   <span className="text-[10px] font-mono text-neutral-400">{block.hash.substring(0, 6)}...</span>
                </div>
-               <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-neutral-500 uppercase font-bold">Prev:</span>
-                  <span className="text-[10px] font-mono text-neutral-400">{block.previousHash.substring(0, 6)}...</span>
-               </div>
             </div>
           </div>
         </div>
@@ -210,7 +206,10 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
               </div>
 
               {!isValid && error && (
-                <div className="rounded-xl bg-red-500/10 border border-red-500/20 overflow-hidden">
+                <div className={clsx(
+                  "rounded-xl bg-red-500/10 border border-red-500/20 overflow-hidden",
+                  "animate-in fade-in slide-in-from-top-2 duration-300"
+                )}>
                   <div className="flex items-center justify-between px-3 py-2 border-b border-red-500/10">
                     <div className="flex items-center gap-2">
                       {showTechnical ? <Terminal className="h-3 w-3 text-red-500" /> : <Info className="h-3 w-3 text-red-500" />}

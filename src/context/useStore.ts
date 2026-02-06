@@ -23,17 +23,22 @@ interface AppState extends BlockchainState {
   progress: LearningProgress;
 
   // Actions
-  addTransaction: (tx: Omit<Transaction, 'id' | 'timestamp'>) => void;
+  addTransaction: (tx: Omit<Transaction, 'id' | 'timestamp'>) => { success: boolean; error?: string };
   clearMempool: () => void;
-  addBlock: (blockData: Omit<Block, 'id'> & { id?: string }) => void;
-  tamperBlock: (id: string, tamperedTransactions: Transaction[]) => Promise<void>;
-  setDifficulty: (difficulty: number) => void;
+  addBlock: (blockData: Omit<Block, 'id'> & { id?: string }) => { success: boolean; error?: string };
+  tamperBlock: (id: string, tamperedTransactions: Transaction[]) => Promise<{ success: boolean; error?: string }>;
+  setDifficulty: (difficulty: number) => { success: boolean; error?: string };
   setSelectedTipId: (id: string | null) => void;
   resetChain: () => Promise<void>;
   initialize: () => Promise<void>;
   setLearningLevel: (level: LearningLevel) => void;
   recordHashChange: (newHash: string) => void;
   resetLearningProgress: () => void;
+  updateChainValidity: () => Promise<void>;
+
+  isValid: boolean;
+  firstInvalidBlockId: string | null;
+  validationErrors: Record<string, import('../blockchain/logic').BlockValidationError>;
 }
 
 export const useStore = create<AppState>()(
@@ -46,6 +51,9 @@ export const useStore = create<AppState>()(
       mempool: [],
       difficulty: 2,
       selectedTipId: null,
+      isValid: true,
+      firstInvalidBlockId: null,
+      validationErrors: {},
 
       // Learning Progress Defaults
       progress: {
@@ -60,7 +68,10 @@ export const useStore = create<AppState>()(
       initialize: async () => {
         const { genesisId } = get();
         // If genesis exists, we might still be in a learning level or completed
-        if (genesisId) return;
+        if (genesisId) {
+          await get().updateChainValidity();
+          return;
+        }
         const genesis = await createGenesisBlock();
         set({
           blocks: { [genesis.id]: genesis },
@@ -68,10 +79,33 @@ export const useStore = create<AppState>()(
           lastBlockId: genesis.id,
           genesisId: genesis.id,
           selectedTipId: genesis.id,
+          isValid: true,
+          firstInvalidBlockId: null,
+          validationErrors: {},
+        });
+      },
+
+      updateChainValidity: async () => {
+        const { blocks, tips, difficulty, selectedTipId } = get();
+        if (Object.keys(blocks).length === 0) return;
+
+        const { validatePath, getLongestChainTip } = await import('../blockchain/logic');
+        const tipId = selectedTipId || getLongestChainTip({ blocks, tips });
+        const validation = await validatePath(blocks, tipId, difficulty);
+
+        set({
+          isValid: validation.isValid,
+          firstInvalidBlockId: validation.firstInvalidBlockId,
+          validationErrors: validation.errors
         });
       },
 
       addTransaction: (tx) => {
+        const { progress } = get();
+        if (progress.currentLevel === 'hash') {
+          return { success: false, error: "Complete the Hash stage before adding transactions." };
+        }
+
         const newTx: Transaction = {
           ...tx,
           id: Math.random().toString(36).substring(2, 9),
@@ -81,11 +115,22 @@ export const useStore = create<AppState>()(
           mempool: [...state.mempool, newTx],
           progress: { ...state.progress, hasAddedTransaction: true }
         }));
+        return { success: true };
       },
 
       clearMempool: () => set({ mempool: [] }),
 
       addBlock: (blockData) => {
+        const { progress, isValid } = get();
+
+        if (progress.currentLevel === 'hash' || progress.currentLevel === 'transactions') {
+          return { success: false, error: "Mining is not yet unlocked." };
+        }
+
+        if (!isValid) {
+          return { success: false, error: "Chain is broken. You cannot extend invalid history." };
+        }
+
         const id = blockData.id || Math.random().toString(36).substring(2, 9);
         const newBlock: Block = { ...blockData, id } as Block;
 
@@ -112,12 +157,20 @@ export const useStore = create<AppState>()(
             progress: { ...state.progress, hasMinedFirstBlock: true }
           };
         });
+
+        get().updateChainValidity();
+        return { success: true };
       },
 
       tamperBlock: async (id, tamperedTransactions) => {
-        const { blocks } = get();
+        const { blocks, genesisId } = get();
+
+        if (id === genesisId) {
+          return { success: false, error: "Genesis block is untouchable." };
+        }
+
         const block = blocks[id];
-        if (!block) return;
+        if (!block) return { success: false, error: "Block not found." };
 
         const { calculateBlockHash } = await import('../blockchain/crypto');
 
@@ -134,9 +187,20 @@ export const useStore = create<AppState>()(
           },
           progress: { ...state.progress, hasTamperedBlock: true }
         }));
+
+        await get().updateChainValidity();
+        return { success: true };
       },
 
-      setDifficulty: (difficulty) => set({ difficulty }),
+      setDifficulty: (difficulty) => {
+        const { progress } = get();
+        if (progress.currentLevel !== 'completed') {
+          return { success: false, error: "Difficulty can only be changed in the final stage." };
+        }
+        set({ difficulty });
+        get().updateChainValidity();
+        return { success: true };
+      },
 
       setSelectedTipId: (id) => set({ selectedTipId: id }),
 
@@ -149,6 +213,9 @@ export const useStore = create<AppState>()(
           genesisId: genesis.id,
           mempool: [],
           selectedTipId: genesis.id,
+          isValid: true,
+          firstInvalidBlockId: null,
+          validationErrors: {},
         });
       },
 
@@ -156,9 +223,33 @@ export const useStore = create<AppState>()(
         // Finite State Machine: Only allow forward progression
         const levels: LearningLevel[] = ['hash', 'transactions', 'mining', 'chain', 'completed'];
         const currentIndex = levels.indexOf(state.progress.currentLevel);
-        const nextIndex = levels.indexOf(level);
+        const targetIndex = levels.indexOf(level);
 
-        if (nextIndex > currentIndex) {
+        // Can only progress to the next level
+        if (targetIndex !== currentIndex + 1) return state;
+
+        // Validation criteria for each transition
+        const { progress } = state;
+        let canProgress = false;
+
+        switch (state.progress.currentLevel) {
+          case 'hash':
+            canProgress = progress.hashChanges >= 2;
+            break;
+          case 'transactions':
+            canProgress = progress.hasAddedTransaction;
+            break;
+          case 'mining':
+            canProgress = progress.hasMinedFirstBlock;
+            break;
+          case 'chain':
+            canProgress = progress.hasTamperedBlock;
+            break;
+          default:
+            canProgress = false;
+        }
+
+        if (canProgress) {
           return {
             progress: { ...state.progress, currentLevel: level }
           };
@@ -194,6 +285,9 @@ export const useStore = create<AppState>()(
           mempool: [],
           selectedTipId: null,
           difficulty: 2,
+          isValid: true,
+          firstInvalidBlockId: null,
+          validationErrors: {},
         });
         // We don't call initialize() here because it's async and we want to keep actions synchronous.
         // App.tsx has an effect that calls initialize() when genesisId is missing.

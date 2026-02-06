@@ -12,11 +12,16 @@ export const TransactionForm: React.FC = () => {
     e.preventDefault();
     if (!from || !to || !amount) return;
 
-    addTransaction({
+    const result = addTransaction({
       from,
       to,
       amount: parseFloat(amount),
     });
+
+    if (!result.success) {
+      alert(result.error);
+      return;
+    }
 
     setFrom('');
     setTo('');

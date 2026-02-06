@@ -16,7 +16,12 @@ export async function validateBlock(
   previousBlock: Block | null,
   difficulty: number
 ): Promise<{ isValid: boolean; error?: BlockValidationError }> {
-  // Check hash integrity (applies to ALL blocks, including genesis)
+  // Genesis block is untouchable and valid by definition
+  if (isGenesisBlock(block)) {
+    return { isValid: true };
+  }
+
+  // Check hash integrity
   const recalculatedHash = await calculateBlockHash(block);
   if (block.hash !== recalculatedHash) {
     return {
@@ -26,21 +31,6 @@ export async function validateBlock(
         technical: `Hash mismatch: expected ${recalculatedHash.substring(0, 10)}..., but block has ${block.hash.substring(0, 10)}...`
       }
     };
-  }
-
-  // Genesis block specific rules
-  if (isGenesisBlock(block)) {
-    if (validateGenesisBlock(block)) {
-      return { isValid: true };
-    } else {
-      return {
-        isValid: false,
-        error: {
-          educational: "The Genesis block has been tampered with. It must have index 0 and no parent.",
-          technical: "Invalid genesis structure."
-        }
-      };
-    }
   }
 
   // Check index
