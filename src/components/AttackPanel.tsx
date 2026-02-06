@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../context/useStore';
 import { useMining } from '../hooks/useMining';
+import type { Block } from '../blockchain/types';
 import { Swords, Skull, ShieldCheck } from 'lucide-react';
 import { getLongestChainTip } from '../blockchain/logic';
 import { clsx } from 'clsx';
@@ -21,7 +22,7 @@ export const AttackPanel: React.FC = () => {
 
     const currentLongest = getLongestChainTip({ blocks, tips } as any);
     const path = [];
-    let curr = blocks[currentLongest];
+    let curr: Block | null | undefined = blocks[currentLongest];
     while (curr) {
       path.unshift(curr);
       curr = curr.parentId ? blocks[curr.parentId] : null;
