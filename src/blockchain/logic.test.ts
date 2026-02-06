@@ -35,7 +35,6 @@ describe('Blockchain Logic', () => {
       transactions: [{ id: '1', from: 'A', to: 'B', amount: 10, timestamp: Date.now() }],
       previousHash: genesis.hash,
       nonce: 123,
-      difficulty: 0,
       hash: '',
     };
     block1.hash = await calculateBlockHash(block1);
@@ -45,7 +44,7 @@ describe('Blockchain Logic', () => {
       [block1.id]: block1,
     };
 
-    const validation = await validatePath(blocks, block1.id);
+    const validation = await validatePath(blocks, block1.id, 0);
     expect(validation.isValid).toBe(true);
   });
 
@@ -61,7 +60,6 @@ describe('Blockchain Logic', () => {
       transactions: [{ id: '1', from: 'A', to: 'B', amount: 10, timestamp: Date.now() }],
       previousHash: genesis.hash,
       nonce: 0,
-      difficulty: 1,
       hash: '',
     };
     // Find a nonce that satisfies difficulty 1
@@ -78,7 +76,6 @@ describe('Blockchain Logic', () => {
       transactions: [],
       previousHash: block1.hash,
       nonce: 0,
-      difficulty: 1,
       hash: '',
     };
     while (!(await calculateBlockHash(block2)).startsWith('0')) {
@@ -101,7 +98,7 @@ describe('Blockchain Logic', () => {
       [block1.id]: tamperedBlock1,
     };
 
-    const validation = await validatePath(tamperedBlocks, block2.id);
+    const validation = await validatePath(tamperedBlocks, block2.id, 1);
     expect(validation.isValid).toBe(false);
     expect(validation.errors[block1.id]).toBeDefined(); // Tampered
     expect(validation.errors[block2.id].educational).toBe('This block is broken because the block before it is invalid. Chains are only as strong as their weakest link.'); // Ripple effect

@@ -12,7 +12,7 @@ import { Home, PlusSquare, Pickaxe, RotateCcw } from 'lucide-react';
 import { clsx } from 'clsx';
 
 function App() {
-  const { blocks, tips, initialize, progress, resetLearningProgress, genesisId } = useStore();
+  const { blocks, tips, initialize, progress, resetLearningProgress, genesisId, difficulty } = useStore();
   const { currentLevel } = progress;
   const { isMining } = useMining();
   const [isValid, setIsValid] = useState(true);
@@ -25,11 +25,11 @@ function App() {
     const checkValidity = async () => {
       if (Object.keys(blocks).length === 0) return;
       const tipId = getLongestChainTip({ blocks, tips });
-      const validation = await validatePath(blocks, tipId);
+      const validation = await validatePath(blocks, tipId, difficulty);
       setIsValid(validation.isValid);
     };
     checkValidity();
-  }, [blocks, tips]);
+  }, [blocks, tips, difficulty]);
 
   const [activeTab, setActiveTab] = useState<'home' | 'tx' | 'mine'>('home');
 

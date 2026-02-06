@@ -4,13 +4,15 @@ import { getChainPath, getLongestChainTip, validatePath, type BlockValidationErr
 import { BlockCard } from './BlockCard';
 import { AlertTriangle, ArrowDown, Link2Off } from 'lucide-react';
 import { ExplainThis } from './ExplainThis';
+import { motion } from 'framer-motion';
+import { clsx } from 'clsx';
 
 interface VerticalTimelineProps {
   hideExplanations?: boolean;
 }
 
 export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanations = false }) => {
-  const { blocks, tips, selectedTipId } = useStore();
+  const { blocks, tips, selectedTipId, difficulty } = useStore();
   const [validationErrors, setValidationErrors] = useState<Record<string, BlockValidationError>>({});
   const [firstInvalidId, setFirstInvalidId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -25,22 +27,20 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
     const validateAll = async () => {
       if (chainPath.length === 0) return;
       const lastBlockId = chainPath[chainPath.length - 1].id;
-      const validation = await validatePath(blocks, lastBlockId);
+      const validation = await validatePath(blocks, lastBlockId, difficulty);
       setValidationErrors(validation.errors);
       setFirstInvalidId(validation.firstInvalidBlockId);
 
       // Auto-scroll to the first invalid block
       if (validation.firstInvalidBlockId && blockRefs.current[validation.firstInvalidBlockId]) {
-        setTimeout(() => {
-          blockRefs.current[validation.firstInvalidBlockId!]?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          });
-        }, 300);
+        blockRefs.current[validation.firstInvalidBlockId!]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
       }
     };
     validateAll();
-  }, [blocks, chainPath]);
+  }, [blocks, chainPath, difficulty]);
 
   if (chainPath.length === 0) {
     return (
@@ -80,7 +80,14 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
                   ref={el => blockRefs.current[block.id] = el}
                   className="w-full h-[100dvh] flex items-center justify-center p-4 snap-start relative"
                 >
-                  <div className="w-full max-w-md">
+                  <motion.div
+                    animate={isFirstInvalid ? {
+                      x: [0, -10, 10, -10, 10, 0],
+                      backgroundColor: ["rgba(0,0,0,0)", "rgba(239, 68, 68, 0.1)", "rgba(0,0,0,0)"]
+                    } : {}}
+                    transition={{ duration: 0.5, repeat: isFirstInvalid ? Infinity : 0, repeatDelay: 2 }}
+                    className="w-full max-w-md"
+                  >
                     <BlockCard
                       block={block}
                       isValid={!isInvalid}
@@ -94,7 +101,7 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
                         <ArrowDown className="h-5 w-5 text-neutral-700" />
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 </div>
 
                 {index < chainPath.length - 1 && (

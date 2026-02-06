@@ -1,19 +1,9 @@
 import type { Block, BlockId, BlockMap, BlockchainState } from './types';
 import { calculateBlockHash } from './crypto';
+import { isGenesisBlock, validateGenesisBlock, createGenesisBlock as createGenesis } from './genesis';
 
 export async function createGenesisBlock(): Promise<Block> {
-  const genesisBlock: Omit<Block, 'hash' | 'id'> = {
-    index: 0,
-    timestamp: 1738771200000,
-    transactions: [],
-    nonce: 0,
-    previousHash: '0',
-    difficulty: 0,
-    parentId: null,
-  };
-
-  const hash = await calculateBlockHash(genesisBlock as Block);
-  return { ...genesisBlock, hash, id: 'genesis' } as Block;
+  return createGenesis();
 }
 
 export interface BlockValidationError {
@@ -26,7 +16,7 @@ export async function validateBlock(
   previousBlock: Block | null,
   difficulty: number
 ): Promise<{ isValid: boolean; error?: BlockValidationError }> {
-  // Check hash integrity
+  // Check hash integrity (applies to ALL blocks, including genesis)
   const recalculatedHash = await calculateBlockHash(block);
   if (block.hash !== recalculatedHash) {
     return {
@@ -38,18 +28,19 @@ export async function validateBlock(
     };
   }
 
-  // If genesis
-  if (block.index === 0) {
-    if (block.previousHash !== '0') {
+  // Genesis block specific rules
+  if (isGenesisBlock(block)) {
+    if (validateGenesisBlock(block)) {
+      return { isValid: true };
+    } else {
       return {
         isValid: false,
         error: {
-          educational: "The first block in the chain (Genesis) must have a previous hash of '0'.",
-          technical: `Invalid genesis: previousHash is ${block.previousHash}`
+          educational: "The Genesis block has been tampered with. It must have index 0 and no parent.",
+          technical: "Invalid genesis structure."
         }
       };
     }
-    return { isValid: true };
   }
 
   // Check index
@@ -97,7 +88,8 @@ export interface ValidationResult {
 
 export async function validatePath(
   blocks: BlockMap,
-  tipId: BlockId
+  tipId: BlockId,
+  difficulty: number
 ): Promise<ValidationResult> {
   const errors: Record<BlockId, BlockValidationError> = {};
   const path = getChainPath(blocks, tipId);
@@ -116,7 +108,7 @@ export async function validatePath(
       continue;
     }
 
-    const validation = await validateBlock(block, previousBlock, block.difficulty);
+    const validation = await validateBlock(block, previousBlock, difficulty);
     if (!validation.isValid && validation.error) {
       errors[block.id] = validation.error;
       pathIsValid = false;

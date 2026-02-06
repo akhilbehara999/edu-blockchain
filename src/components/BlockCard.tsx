@@ -21,9 +21,12 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
   const [isExpanded, setIsExpanded] = useState(false);
   const [showTechnical, setShowTechnical] = useState(false);
   const [tamperedTxs, setTamperedTxs] = useState<Transaction[]>(block.transactions);
+  const [isShaking, setIsShaking] = useState(false);
 
   const handleTamper = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
     await tamperBlock(block.id, tamperedTxs);
     setIsEditing(false);
   };
@@ -35,7 +38,12 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
   };
 
   return (
-    <div
+    <motion.div
+      animate={isShaking ? {
+        x: [0, -10, 10, -10, 10, 0],
+        boxShadow: ["0 0 0 rgba(239, 68, 68, 0)", "0 0 40px rgba(239, 68, 68, 0.5)", "0 0 0 rgba(239, 68, 68, 0)"]
+      } : {}}
+      transition={{ duration: 0.5 }}
       onClick={() => setIsExpanded(!isExpanded)}
       className={clsx(
       "group relative flex flex-col rounded-2xl border transition-all duration-300 cursor-pointer",
@@ -105,10 +113,6 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
                 <div className="space-y-1">
                   <span className="text-[10px] uppercase tracking-wider text-neutral-500 block font-bold">Nonce</span>
                   <span className="text-sm font-mono text-white">{block.nonce}</span>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 block font-bold">Difficulty</span>
-                  <span className="text-sm font-mono text-white">{block.difficulty}</span>
                 </div>
                 {!isGenesis && (
                   <button
@@ -214,19 +218,21 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
                         {showTechnical ? 'Technical Error' : 'What happened?'}
                       </span>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowTechnical(!showTechnical);
-                      }}
-                      className="text-[9px] font-bold text-neutral-500 uppercase hover:text-white transition-colors"
-                    >
-                      {showTechnical ? 'Show Simple' : 'Show Details'}
-                    </button>
+                    {(currentLevel === 'chain' || currentLevel === 'completed') && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowTechnical(!showTechnical);
+                        }}
+                        className="text-[9px] font-bold text-neutral-500 uppercase hover:text-white transition-colors"
+                      >
+                        {showTechnical ? 'Show Simple' : 'Show Details'}
+                      </button>
+                    )}
                   </div>
                   <div className="p-3">
                     <p className="text-xs text-neutral-200 leading-relaxed">
-                      {showTechnical ? error.technical : error.educational}
+                      {(showTechnical && (currentLevel === 'chain' || currentLevel === 'completed')) ? error.technical : error.educational}
                     </p>
                   </div>
                 </div>
@@ -235,6 +241,6 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 };
