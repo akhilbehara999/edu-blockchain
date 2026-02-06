@@ -18,7 +18,7 @@ export const MiningPanel: React.FC = () => {
       const block = blocks[selectedTipId];
       const parentBlock = block.parentId ? blocks[block.parentId] : null;
 
-      const validation = await validateBlock(block, parentBlock, block.difficulty);
+      const validation = await validateBlock(block, parentBlock, difficulty);
       setParentIsValid(validation.isValid);
       setParentError(validation.isValid ? null : validation.error?.educational || 'Invalid parent block');
     };
@@ -51,7 +51,6 @@ export const MiningPanel: React.FC = () => {
         previousHash,
         nonce: result.nonce,
         hash: result.hash,
-        difficulty,
         parentId: selectedTipId,
       });
     } catch (err) {

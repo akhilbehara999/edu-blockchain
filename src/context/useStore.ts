@@ -8,6 +8,7 @@ export type LearningLevel = 'hash' | 'transactions' | 'mining' | 'chain' | 'comp
 export interface LearningProgress {
   currentLevel: LearningLevel;
   hashChanges: number;
+  lastCalculatedHash: string;
   hasAddedTransaction: boolean;
   hasMinedFirstBlock: boolean;
   hasTamperedBlock: boolean;
@@ -31,7 +32,7 @@ interface AppState extends BlockchainState {
   resetChain: () => Promise<void>;
   initialize: () => Promise<void>;
   setLearningLevel: (level: LearningLevel) => void;
-  recordHashChange: () => void;
+  recordHashChange: (newHash: string) => void;
   resetLearningProgress: () => void;
 }
 
@@ -40,6 +41,7 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       blocks: {},
       tips: [],
+      lastBlockId: '',
       genesisId: '',
       mempool: [],
       difficulty: 2,
@@ -49,6 +51,7 @@ export const useStore = create<AppState>()(
       progress: {
         currentLevel: 'hash',
         hashChanges: 0,
+        lastCalculatedHash: '',
         hasAddedTransaction: false,
         hasMinedFirstBlock: false,
         hasTamperedBlock: false,
@@ -62,6 +65,7 @@ export const useStore = create<AppState>()(
         set({
           blocks: { [genesis.id]: genesis },
           tips: [genesis.id],
+          lastBlockId: genesis.id,
           genesisId: genesis.id,
           selectedTipId: genesis.id,
         });
@@ -87,18 +91,22 @@ export const useStore = create<AppState>()(
 
         set((state) => {
           const newBlocks = { ...state.blocks, [newBlock.id]: newBlock };
-          // A block is a tip if it has no children.
-          // When we add a block, its parent might no longer be a tip.
-          // However, in a branching structure, a parent could have multiple children.
-          // For simplicity, we just keep track of all leaf nodes.
-          const newTips = state.tips.filter((t) => t !== newBlock.parentId);
-          if (!newTips.includes(newBlock.id)) {
-            newTips.push(newBlock.id);
+
+          // Single chain logic for learning stages, forks for COMPLETED
+          let newTips = [...state.tips];
+          if (state.progress.currentLevel === 'completed') {
+            newTips = state.tips.filter((t) => t !== newBlock.parentId);
+            if (!newTips.includes(newBlock.id)) {
+              newTips.push(newBlock.id);
+            }
+          } else {
+            newTips = [newBlock.id];
           }
 
           return {
             blocks: newBlocks,
             tips: newTips,
+            lastBlockId: newBlock.id,
             mempool: [],
             selectedTipId: newBlock.id, // Auto-select the newly mined block
             progress: { ...state.progress, hasMinedFirstBlock: true }
@@ -137,29 +145,51 @@ export const useStore = create<AppState>()(
         set({
           blocks: { [genesis.id]: genesis },
           tips: [genesis.id],
+          lastBlockId: genesis.id,
           genesisId: genesis.id,
           mempool: [],
           selectedTipId: genesis.id,
         });
       },
 
-      setLearningLevel: (level) => set((state) => ({
-        progress: { ...state.progress, currentLevel: level }
-      })),
-      recordHashChange: () => set((state) => ({
-        progress: { ...state.progress, hashChanges: state.progress.hashChanges + 1 }
-      })),
+      setLearningLevel: (level) => set((state) => {
+        // Finite State Machine: Only allow forward progression
+        const levels: LearningLevel[] = ['hash', 'transactions', 'mining', 'chain', 'completed'];
+        const currentIndex = levels.indexOf(state.progress.currentLevel);
+        const nextIndex = levels.indexOf(level);
+
+        if (nextIndex > currentIndex) {
+          return {
+            progress: { ...state.progress, currentLevel: level }
+          };
+        }
+        return state;
+      }),
+      recordHashChange: (newHash: string) => set((state) => {
+        if (newHash !== state.progress.lastCalculatedHash) {
+          return {
+            progress: {
+              ...state.progress,
+              hashChanges: state.progress.hashChanges + 1,
+              lastCalculatedHash: newHash
+            }
+          };
+        }
+        return state;
+      }),
       resetLearningProgress: () => {
         set({
           progress: {
             currentLevel: 'hash',
             hashChanges: 0,
+            lastCalculatedHash: '',
             hasAddedTransaction: false,
             hasMinedFirstBlock: false,
             hasTamperedBlock: false,
           },
           blocks: {},
           tips: [],
+          lastBlockId: '',
           genesisId: '',
           mempool: [],
           selectedTipId: null,

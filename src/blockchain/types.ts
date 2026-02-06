@@ -18,7 +18,6 @@ export interface Block {
   previousHash: string;
   nonce: number;
   hash: string;
-  difficulty: number;
 }
 
 export type BlockMap = Record<BlockId, Block>;
@@ -26,6 +25,7 @@ export type BlockMap = Record<BlockId, Block>;
 export interface BlockchainState {
   blocks: BlockMap; // Map internal ID to block
   tips: BlockId[]; // IDs of blocks that are at the end of a branch
+  lastBlockId: BlockId; // The single active tip for learning stages
   genesisId: BlockId;
 }
 

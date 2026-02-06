@@ -4,6 +4,7 @@ import { calculateHash } from '../blockchain/crypto';
 import { ExplainThis } from './ExplainThis';
 import { LevelWizard } from './LevelWizard';
 import { Fingerprint } from 'lucide-react';
+import { clsx } from 'clsx';
 
 export const Level1Hash: React.FC = () => {
   const { setLearningLevel, recordHashChange, progress } = useStore();
@@ -21,8 +22,15 @@ export const Level1Hash: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
-    recordHashChange();
   };
+
+  useEffect(() => {
+    if (hash) {
+      recordHashChange(hash);
+    }
+  }, [hash, recordHashChange]);
+
+  const lastHash = progress.lastCalculatedHash;
 
   return (
     <LevelWizard
@@ -57,8 +65,20 @@ export const Level1Hash: React.FC = () => {
             <Fingerprint className="h-4 w-4 text-brand-secondary" />
             <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">Resulting Hash</span>
           </div>
-          <div className="break-all font-mono text-sm text-brand-primary leading-relaxed">
-            {hash}
+          <div className="break-all font-mono text-sm leading-relaxed">
+            {hash.split('').map((char, i) => (
+              <span
+                key={i}
+                className={clsx(
+                  "transition-colors duration-500",
+                  lastHash && char !== lastHash[i]
+                    ? "text-brand-secondary bg-brand-secondary/20 shadow-[0_0_8px_rgba(var(--brand-secondary-rgb),0.5)]"
+                    : "text-brand-primary"
+                )}
+              >
+                {char}
+              </span>
+            ))}
           </div>
         </div>
 
