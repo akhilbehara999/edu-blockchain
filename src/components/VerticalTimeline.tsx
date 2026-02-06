@@ -1,6 +1,6 @@
-import React, { useMemo, useEffect, useState, useRef } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../context/useStore';
-import { getChainPath, getLongestChainTip, validatePath, type BlockValidationError } from '../blockchain/logic';
+import { getChainPath, getLongestChainTip } from '../blockchain/logic';
 import { BlockCard } from './BlockCard';
 import { AlertTriangle, ArrowDown, Link2Off } from 'lucide-react';
 import { ExplainThis } from './ExplainThis';
@@ -12,7 +12,7 @@ interface VerticalTimelineProps {
 }
 
 export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanations = false }) => {
-  const { blocks, tips, selectedTipId, difficulty, validationErrors, firstInvalidBlockId: firstInvalidId, isValid } = useStore();
+  const { blocks, tips, selectedTipId, validationErrors, firstInvalidBlockId: firstInvalidId, isValid } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const blockRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const prevIsValidRef = useRef(isValid);
@@ -68,7 +68,7 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
             return (
               <React.Fragment key={block.id}>
                 <div
-                  ref={el => blockRefs.current[block.id] = el}
+                  ref={el => { blockRefs.current[block.id] = el; }}
                   className="w-full h-[calc(100dvh-3.5rem)] flex items-center justify-center p-4 snap-start relative"
                 >
                   <motion.div
