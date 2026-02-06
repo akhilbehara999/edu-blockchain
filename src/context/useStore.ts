@@ -11,7 +11,6 @@ export interface LearningProgress {
   lastCalculatedHash: string;
   hasAddedTransaction: boolean;
   hasMinedFirstBlock: boolean;
-  hasTamperedBlock: boolean;
 }
 
 interface AppState extends BlockchainState {
@@ -62,7 +61,6 @@ export const useStore = create<AppState>()(
         lastCalculatedHash: '',
         hasAddedTransaction: false,
         hasMinedFirstBlock: false,
-        hasTamperedBlock: false,
       },
 
       initialize: async () => {
@@ -192,8 +190,7 @@ export const useStore = create<AppState>()(
           blocks: {
             ...state.blocks,
             [id]: tamperedBlock
-          },
-          progress: { ...state.progress, hasTamperedBlock: true }
+          }
         }));
 
         return { success: true };
@@ -231,7 +228,6 @@ export const useStore = create<AppState>()(
             lastCalculatedHash: '',
             hasAddedTransaction: false,
             hasMinedFirstBlock: false,
-            hasTamperedBlock: false,
           }
         });
       },
@@ -246,7 +242,7 @@ export const useStore = create<AppState>()(
         if (targetIndex !== currentIndex + 1) return state;
 
         // Validation criteria for each transition
-        const { progress } = state;
+        const { progress, isValid } = state;
         let canProgress = false;
 
         switch (state.progress.currentLevel) {
@@ -260,7 +256,7 @@ export const useStore = create<AppState>()(
             canProgress = progress.hasMinedFirstBlock;
             break;
           case 'chain':
-            canProgress = progress.hasTamperedBlock;
+            canProgress = !isValid;
             break;
           default:
             canProgress = false;
@@ -293,7 +289,6 @@ export const useStore = create<AppState>()(
             lastCalculatedHash: '',
             hasAddedTransaction: false,
             hasMinedFirstBlock: false,
-            hasTamperedBlock: false,
           },
           blocks: {},
           tips: [],

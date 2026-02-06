@@ -5,14 +5,13 @@ import { LevelWizard } from './LevelWizard';
 import { VerticalTimeline } from './VerticalTimeline';
 
 export const Level4Chain: React.FC = () => {
-  const { setLearningLevel, progress } = useStore();
-  const { hasTamperedBlock } = progress;
+  const { setLearningLevel, isValid } = useStore();
 
   return (
     <LevelWizard
       level="chain"
       title="4. The Immutable Chain"
-      canProgress={hasTamperedBlock}
+      canProgress={!isValid}
       onNext={() => setLearningLevel('completed')}
     >
       <ExplainThis
@@ -27,7 +26,7 @@ export const Level4Chain: React.FC = () => {
         <VerticalTimeline hideExplanations={true} />
       </div>
 
-      {!hasTamperedBlock && (
+      {isValid && (
         <p className="text-center text-sm text-neutral-500 italic mt-4">
           Tap the edit icon on a block to tamper with it
         </p>
