@@ -6,7 +6,8 @@ import { TransactionForm } from './TransactionForm';
 import { Mempool } from './Mempool';
 
 export const Level2Transactions: React.FC = () => {
-  const { setLearningLevel, hasAddedTransaction } = useStore();
+  const { setLearningLevel, progress } = useStore();
+  const { hasAddedTransaction } = progress;
 
   return (
     <LevelWizard

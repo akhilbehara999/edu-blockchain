@@ -1,3 +1,6 @@
+export type BlockId = string;
+export type ParentId = BlockId | null;
+
 export interface Transaction {
   id: string;
   from: string;
@@ -7,8 +10,8 @@ export interface Transaction {
 }
 
 export interface Block {
-  id: string; // Internal ID for simulator tracking and rendering
-  parentId: string | null; // ID of the parent block in the tree
+  id: BlockId; // Internal ID for simulator tracking and rendering
+  parentId: ParentId; // ID of the parent block in the tree
   index: number;
   timestamp: number;
   transactions: Transaction[];
@@ -18,10 +21,12 @@ export interface Block {
   difficulty: number;
 }
 
+export type BlockMap = Record<BlockId, Block>;
+
 export interface BlockchainState {
-  blocks: Record<string, Block>; // Map internal ID to block
-  tips: string[]; // IDs of blocks that are at the end of a branch
-  genesisId: string;
+  blocks: BlockMap; // Map internal ID to block
+  tips: BlockId[]; // IDs of blocks that are at the end of a branch
+  genesisId: BlockId;
 }
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';

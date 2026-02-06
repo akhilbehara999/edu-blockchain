@@ -1,22 +1,25 @@
 import React, { useState } from 'react';
 import type { Block, Transaction } from '../blockchain/types';
+import type { BlockValidationError } from '../blockchain/logic';
 import { useStore } from '../context/useStore';
 import { format } from 'date-fns';
-import { Edit2, Check, X, ChevronDown, ChevronUp, GitBranch } from 'lucide-react';
+import { Edit2, Check, X, ChevronDown, ChevronUp, GitBranch, Info, Terminal } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface BlockCardProps {
   block: Block;
   isValid: boolean;
-  error?: string;
+  error?: BlockValidationError;
   isGenesis?: boolean;
 }
 
 export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isGenesis }) => {
-  const { tamperBlock, currentLevel } = useStore();
+  const { tamperBlock, progress } = useStore();
+  const { currentLevel } = progress;
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showTechnical, setShowTechnical] = useState(false);
   const [tamperedTxs, setTamperedTxs] = useState<Transaction[]>(block.transactions);
 
   const handleTamper = async (e: React.MouseEvent) => {
@@ -69,21 +72,6 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
         </div>
 
         <div className="flex items-center gap-2">
-           {!isGenesis && (
-             <button
-               onClick={(e) => {
-                 e.stopPropagation();
-                 setIsEditing(!isEditing);
-                 setIsExpanded(true);
-               }}
-               className={clsx(
-                 "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-                 isEditing ? "bg-amber-500 text-white" : "text-neutral-500 hover:bg-neutral-800 hover:text-white"
-               )}
-             >
-               <Edit2 className="h-4 w-4" />
-             </button>
-           )}
            {isExpanded ? <ChevronUp className="h-5 w-5 text-neutral-600" /> : <ChevronDown className="h-5 w-5 text-neutral-600" />}
         </div>
       </div>
@@ -122,6 +110,20 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
                   <span className="text-[10px] uppercase tracking-wider text-neutral-500 block font-bold">Difficulty</span>
                   <span className="text-sm font-mono text-white">{block.difficulty}</span>
                 </div>
+                {!isGenesis && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditing(!isEditing);
+                    }}
+                    className={clsx(
+                      "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                      isEditing ? "bg-amber-500 text-white" : "bg-neutral-800 text-neutral-500 hover:text-white"
+                    )}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                )}
                 {currentLevel === 'completed' && (
                   <div className="ml-auto">
                     <button
@@ -204,9 +206,29 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
               </div>
 
               {!isValid && error && (
-                <div className="rounded-lg bg-red-500/10 p-2.5 text-[10px] text-red-500 flex items-start gap-2">
-                  <X className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                  <span>{error}</span>
+                <div className="rounded-xl bg-red-500/10 border border-red-500/20 overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-red-500/10">
+                    <div className="flex items-center gap-2">
+                      {showTechnical ? <Terminal className="h-3 w-3 text-red-500" /> : <Info className="h-3 w-3 text-red-500" />}
+                      <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">
+                        {showTechnical ? 'Technical Error' : 'What happened?'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTechnical(!showTechnical);
+                      }}
+                      className="text-[9px] font-bold text-neutral-500 uppercase hover:text-white transition-colors"
+                    >
+                      {showTechnical ? 'Show Simple' : 'Show Details'}
+                    </button>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-xs text-neutral-200 leading-relaxed">
+                      {showTechnical ? error.technical : error.educational}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

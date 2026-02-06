@@ -5,29 +5,33 @@ import { createGenesisBlock } from '../blockchain/logic';
 
 export type LearningLevel = 'hash' | 'transactions' | 'mining' | 'chain' | 'completed';
 
+export interface LearningProgress {
+  currentLevel: LearningLevel;
+  hashChanges: number;
+  hasAddedTransaction: boolean;
+  hasMinedFirstBlock: boolean;
+  hasTamperedBlock: boolean;
+}
+
 interface AppState extends BlockchainState {
   mempool: Transaction[];
   difficulty: number;
   selectedTipId: string | null;
 
   // Learning Progress
-  currentLevel: LearningLevel;
-  hasChangedHashInput: boolean;
-  hasAddedTransaction: boolean;
-  hasMinedFirstBlock: boolean;
-  hasTamperedBlock: boolean;
+  progress: LearningProgress;
 
   // Actions
   addTransaction: (tx: Omit<Transaction, 'id' | 'timestamp'>) => void;
   clearMempool: () => void;
-  addBlock: (block: Omit<Block, 'id'> & { id?: string }) => void;
+  addBlock: (blockData: Omit<Block, 'id'> & { id?: string }) => void;
   tamperBlock: (id: string, tamperedTransactions: Transaction[]) => Promise<void>;
   setDifficulty: (difficulty: number) => void;
   setSelectedTipId: (id: string | null) => void;
   resetChain: () => Promise<void>;
   initialize: () => Promise<void>;
   setLearningLevel: (level: LearningLevel) => void;
-  setHasChangedHashInput: (value: boolean) => void;
+  recordHashChange: () => void;
   resetLearningProgress: () => void;
 }
 
@@ -42,11 +46,13 @@ export const useStore = create<AppState>()(
       selectedTipId: null,
 
       // Learning Progress Defaults
-      currentLevel: 'hash',
-      hasChangedHashInput: false,
-      hasAddedTransaction: false,
-      hasMinedFirstBlock: false,
-      hasTamperedBlock: false,
+      progress: {
+        currentLevel: 'hash',
+        hashChanges: 0,
+        hasAddedTransaction: false,
+        hasMinedFirstBlock: false,
+        hasTamperedBlock: false,
+      },
 
       initialize: async () => {
         const { genesisId } = get();
@@ -69,7 +75,7 @@ export const useStore = create<AppState>()(
         };
         set((state) => ({
           mempool: [...state.mempool, newTx],
-          hasAddedTransaction: true
+          progress: { ...state.progress, hasAddedTransaction: true }
         }));
       },
 
@@ -95,7 +101,7 @@ export const useStore = create<AppState>()(
             tips: newTips,
             mempool: [],
             selectedTipId: newBlock.id, // Auto-select the newly mined block
-            hasMinedFirstBlock: true
+            progress: { ...state.progress, hasMinedFirstBlock: true }
           };
         });
       },
@@ -118,7 +124,7 @@ export const useStore = create<AppState>()(
             ...state.blocks,
             [id]: tamperedBlock
           },
-          hasTamperedBlock: true
+          progress: { ...state.progress, hasTamperedBlock: true }
         }));
       },
 
@@ -137,20 +143,27 @@ export const useStore = create<AppState>()(
         });
       },
 
-      setLearningLevel: (level) => set({ currentLevel: level }),
-      setHasChangedHashInput: (value) => set({ hasChangedHashInput: value }),
+      setLearningLevel: (level) => set((state) => ({
+        progress: { ...state.progress, currentLevel: level }
+      })),
+      recordHashChange: () => set((state) => ({
+        progress: { ...state.progress, hashChanges: state.progress.hashChanges + 1 }
+      })),
       resetLearningProgress: () => {
         set({
-          currentLevel: 'hash',
-          hasChangedHashInput: false,
-          hasAddedTransaction: false,
-          hasMinedFirstBlock: false,
-          hasTamperedBlock: false,
+          progress: {
+            currentLevel: 'hash',
+            hashChanges: 0,
+            hasAddedTransaction: false,
+            hasMinedFirstBlock: false,
+            hasTamperedBlock: false,
+          },
           blocks: {},
           tips: [],
           genesisId: '',
           mempool: [],
           selectedTipId: null,
+          difficulty: 2,
         });
         // We don't call initialize() here because it's async and we want to keep actions synchronous.
         // App.tsx has an effect that calls initialize() when genesisId is missing.

@@ -5,7 +5,8 @@ import { LevelWizard } from './LevelWizard';
 import { MiningPanel } from './MiningPanel';
 
 export const Level3Mining: React.FC = () => {
-  const { setLearningLevel, hasMinedFirstBlock } = useStore();
+  const { setLearningLevel, progress } = useStore();
+  const { hasMinedFirstBlock } = progress;
 
   return (
     <LevelWizard
