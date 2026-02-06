@@ -3,10 +3,18 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Block, Transaction, BlockchainState } from '../blockchain/types';
 import { createGenesisBlock } from '../blockchain/logic';
 
+export type LearningLevel = 'hash' | 'transactions' | 'mining' | 'completed';
+
 interface AppState extends BlockchainState {
   mempool: Transaction[];
   difficulty: number;
   selectedTipId: string | null;
+
+  // Learning Progress
+  currentLevel: LearningLevel;
+  hasChangedHashInput: boolean;
+  hasAddedTransaction: boolean;
+  hasMinedFirstBlock: boolean;
 
   // Actions
   addTransaction: (tx: Omit<Transaction, 'id' | 'timestamp'>) => void;
@@ -17,6 +25,9 @@ interface AppState extends BlockchainState {
   setSelectedTipId: (id: string | null) => void;
   resetChain: () => Promise<void>;
   initialize: () => Promise<void>;
+  setLearningLevel: (level: LearningLevel) => void;
+  setHasChangedHashInput: (value: boolean) => void;
+  resetLearningProgress: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -29,8 +40,15 @@ export const useStore = create<AppState>()(
       difficulty: 2,
       selectedTipId: null,
 
+      // Learning Progress Defaults
+      currentLevel: 'hash',
+      hasChangedHashInput: false,
+      hasAddedTransaction: false,
+      hasMinedFirstBlock: false,
+
       initialize: async () => {
         const { genesisId } = get();
+        // If genesis exists, we might still be in a learning level or completed
         if (genesisId) return;
         const genesis = await createGenesisBlock();
         set({
@@ -47,7 +65,10 @@ export const useStore = create<AppState>()(
           id: Math.random().toString(36).substring(2, 9),
           timestamp: Date.now(),
         };
-        set((state) => ({ mempool: [...state.mempool, newTx] }));
+        set((state) => ({
+          mempool: [...state.mempool, newTx],
+          hasAddedTransaction: true
+        }));
       },
 
       clearMempool: () => set({ mempool: [] }),
@@ -72,6 +93,7 @@ export const useStore = create<AppState>()(
             tips: newTips,
             mempool: [],
             selectedTipId: newBlock.id, // Auto-select the newly mined block
+            hasMinedFirstBlock: true
           };
         });
       },
@@ -110,6 +132,24 @@ export const useStore = create<AppState>()(
           mempool: [],
           selectedTipId: genesis.id,
         });
+      },
+
+      setLearningLevel: (level) => set({ currentLevel: level }),
+      setHasChangedHashInput: (value) => set({ hasChangedHashInput: value }),
+      resetLearningProgress: () => {
+        set({
+          currentLevel: 'hash',
+          hasChangedHashInput: false,
+          hasAddedTransaction: false,
+          hasMinedFirstBlock: false,
+          blocks: {},
+          tips: [],
+          genesisId: '',
+          mempool: [],
+          selectedTipId: null,
+        });
+        // We don't call initialize() here because it's async and we want to keep actions synchronous.
+        // App.tsx has an effect that calls initialize() when genesisId is missing.
       },
     }),
     {

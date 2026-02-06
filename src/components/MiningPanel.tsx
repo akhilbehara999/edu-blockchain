@@ -1,7 +1,8 @@
 import React from 'react';
 import { useStore } from '../context/useStore';
 import { useMining } from '../hooks/useMining';
-import { Pickaxe, Loader2, Play, Target } from 'lucide-react';
+import { Pickaxe, Database } from 'lucide-react';
+import { clsx } from 'clsx';
 
 export const MiningPanel: React.FC = () => {
   const { mempool, blocks, selectedTipId, difficulty, addBlock } = useStore();
@@ -41,87 +42,71 @@ export const MiningPanel: React.FC = () => {
     }
   };
 
-  const selectedBlock = selectedTipId ? blocks[selectedTipId] : null;
-
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Pickaxe className="h-5 w-5 text-brand-primary" />
-          <h2 className="text-lg font-semibold text-white">Mining Control</h2>
+          <h2 className="text-lg font-semibold text-white">Mining</h2>
         </div>
-        {isMining && (
-          <button
-            onClick={stopMining}
-            className="text-xs font-medium text-red-500 hover:text-red-400"
-          >
-            Cancel
-          </button>
-        )}
+        <div className="flex gap-1">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className={clsx(
+                "h-2 w-2 rounded-full",
+                i < difficulty ? "bg-brand-primary" : "bg-neutral-800"
+              )}
+            />
+          ))}
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {selectedBlock && (
-          <div className="flex items-center gap-2 rounded-lg bg-neutral-950 p-2 border border-neutral-800">
-            <Target className="h-3 w-3 text-brand-secondary" />
-            <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider">Targeting:</span>
-            <span className="text-[10px] text-white font-mono">Block #{selectedBlock.index} ({selectedBlock.hash.substring(0, 8)}...)</span>
-          </div>
-        )}
-
+      <div className="space-y-6">
         {isMining ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-neutral-400">Status</span>
-              <span className="flex items-center gap-1 text-sm font-bold text-brand-primary">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Mining...
+          <div className="space-y-6">
+            <div className="text-center">
+              <span className="block text-[10px] uppercase tracking-widest text-neutral-500 mb-1">Current Nonce</span>
+              <span className="text-4xl font-black text-white tabular-nums">
+                {progress?.nonce.toLocaleString() || 0}
               </span>
             </div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-[10px] uppercase tracking-wider text-neutral-500">
-                <span>Current Nonce</span>
-                <span>{progress?.nonce.toLocaleString() || 0}</span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
-                <div
-                  className="h-full bg-brand-primary transition-all duration-300 ease-out"
-                  style={{ width: `${(Math.min(100, (progress?.nonce || 0) / 1000) * 100) % 100}%` }}
-                />
-              </div>
-            </div>
-            <div className="rounded-lg bg-neutral-950 p-3">
-              <span className="block text-[10px] uppercase tracking-wider text-neutral-500">Current Hash Attempt</span>
-              <span className="mt-1 block break-all font-mono text-[10px] text-neutral-400">
+
+            <div className="rounded-xl bg-neutral-950 p-4 border border-neutral-800">
+              <span className="block text-[10px] uppercase tracking-widest text-neutral-500 mb-2">Live Hash</span>
+              <span className="block break-all font-mono text-xs text-brand-primary leading-relaxed">
                 {progress?.hash || 'Initializing...'}
               </span>
             </div>
+
+            <button
+              onClick={stopMining}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/10 py-3 text-sm font-bold text-red-500 transition-colors hover:bg-red-500/20"
+            >
+              Cancel Mining
+            </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="flex flex-col items-center justify-center py-4 text-center">
-              <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-800">
-                <Play className="h-5 w-5 text-neutral-500" />
+          <div className="space-y-6">
+            <div className="flex flex-col items-center justify-center py-8 text-center bg-neutral-950 rounded-xl border border-dashed border-neutral-800">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-900">
+                <Database className="h-6 w-6 text-neutral-600" />
               </div>
-              <p className="text-sm text-neutral-400">
+              <p className="text-sm text-neutral-400 px-4">
                 {mempool.length === 0
-                  ? 'Add transactions to the mempool to begin mining'
-                  : `Ready to mine ${mempool.length} transactions`}
+                  ? 'The mempool is empty. Add transactions first.'
+                  : `${mempool.length} transactions waiting to be mined.`}
               </p>
             </div>
+
             <button
               onClick={handleMine}
               disabled={mempool.length === 0 || !selectedTipId}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-20"
+              className="flex w-full items-center justify-center gap-3 rounded-xl bg-brand-primary py-4 text-lg font-bold text-white shadow-lg shadow-brand-primary/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-20 active:scale-[0.98]"
             >
-              <Pickaxe className="h-4 w-4" />
-              Mine Next Block
+              <Pickaxe className="h-5 w-5" />
+              Mine Block
             </button>
-            {difficulty > 4 && (
-              <div className="rounded-lg bg-amber-500/10 p-2 text-[10px] text-amber-500 text-center">
-                Warning: High difficulty may take several minutes and high CPU.
-              </div>
-            )}
           </div>
         )}
       </div>

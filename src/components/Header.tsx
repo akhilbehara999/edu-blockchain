@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStore } from '../context/useStore';
-import { Shield, ShieldAlert, RefreshCw, Zap } from 'lucide-react';
+import { Shield, ShieldAlert, Zap } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface HeaderProps {
@@ -8,66 +8,44 @@ interface HeaderProps {
   isMining: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ isValid, isMining }) => {
-  const { difficulty, setDifficulty, resetChain } = useStore();
+export const Header: React.FC<HeaderProps> = ({ isValid }) => {
+  const { currentLevel } = useStore();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary">
-            <Zap className="h-6 w-6" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary">
+            <Zap className="h-5 w-5" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">
+          <h1 className="text-lg font-bold tracking-tight text-white">
             Block<span className="text-brand-primary">Sim</span>
           </h1>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className={clsx(
-            "hidden items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium sm:flex",
+            "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
             isValid ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
           )}>
             {isValid ? (
               <>
-                <Shield className="h-4 w-4" />
-                <span>Chain Valid</span>
+                <Shield className="h-3 w-3" />
+                <span>Valid</span>
               </>
             ) : (
               <>
-                <ShieldAlert className="h-4 w-4" />
-                <span>Chain Invalid</span>
+                <ShieldAlert className="h-3 w-3" />
+                <span>Broken</span>
               </>
             )}
           </div>
 
-          <div className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 p-1">
-            <span className="px-2 text-xs font-medium text-neutral-400">Diff</span>
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(Number(e.target.value))}
-              disabled={isMining}
-              className="bg-transparent text-sm font-bold text-white outline-none"
-            >
-              {[1, 2, 3, 4, 5, 6].map((d) => (
-                <option key={d} value={d} className="bg-neutral-900">
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            onClick={() => {
-              if (confirm('Are you sure you want to reset the entire blockchain?')) {
-                resetChain();
-              }
-            }}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
-            title="Reset Chain"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
+          {currentLevel !== 'completed' && (
+             <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest border-l border-neutral-800 pl-3">
+               Level {currentLevel === 'hash' ? 1 : currentLevel === 'transactions' ? 2 : 3}/3
+             </div>
+          )}
         </div>
       </div>
     </header>
