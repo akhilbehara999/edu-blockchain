@@ -16,7 +16,6 @@ export interface Block {
   nonce: number;
   hash: string;
   difficulty: number;
-  isAttacker?: boolean;
 }
 
 export interface BlockchainState {

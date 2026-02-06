@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { Block, Transaction } from '../blockchain/types';
 import { useStore } from '../context/useStore';
 import { format } from 'date-fns';
-import { Edit2, Check, X, ChevronDown, ChevronUp, Link as LinkIcon, Fingerprint, GitBranch } from 'lucide-react';
+import { Edit2, Check, X, ChevronDown, ChevronUp, GitBranch } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -14,12 +14,13 @@ interface BlockCardProps {
 }
 
 export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isGenesis }) => {
-  const tamperBlock = useStore((state) => state.tamperBlock);
+  const { tamperBlock, currentLevel } = useStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [tamperedTxs, setTamperedTxs] = useState<Transaction[]>(block.transactions);
 
-  const handleTamper = async () => {
+  const handleTamper = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     await tamperBlock(block.id, tamperedTxs);
     setIsEditing(false);
   };
@@ -31,113 +32,115 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
   };
 
   return (
-    <div className={clsx(
-      "group relative flex flex-col rounded-2xl border transition-all duration-300",
-      block.isAttacker
-        ? "border-red-500/50 bg-red-950/20 hover:border-red-400/60"
-        : isValid
-          ? "border-neutral-800 bg-neutral-900/40 hover:border-neutral-700"
-          : "border-orange-500/50 bg-orange-950/10 hover:border-orange-400/60"
+    <div
+      onClick={() => setIsExpanded(!isExpanded)}
+      className={clsx(
+      "group relative flex flex-col rounded-2xl border transition-all duration-300 cursor-pointer",
+      isValid
+        ? "border-neutral-800 bg-neutral-900/40"
+        : "border-orange-500/50 bg-orange-950/10"
     )}>
-      {/* Block Header */}
-      <div className="flex items-center justify-between p-4 border-b border-neutral-800/50">
+      {/* Block Header (Always Visible) */}
+      <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
           <div className={clsx(
-            "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold",
-            block.isAttacker
-              ? "bg-red-500 text-white"
-              : isValid ? "bg-neutral-800 text-neutral-400" : "bg-orange-500/20 text-orange-500"
+            "flex h-10 w-10 items-center justify-center rounded-xl text-sm font-black",
+            isValid ? "bg-neutral-800 text-neutral-400" : "bg-orange-500 text-white"
           )}>
             {block.index}
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-white">
-              {isGenesis ? 'Genesis Block' : `Block #${block.index}`}
+          <div className="flex flex-col">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              {isGenesis ? 'Genesis' : `Block #${block.index}`}
+              {!isValid && <span className="text-[10px] bg-orange-500/20 text-orange-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">Broken</span>}
+              {isValid && <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">Valid</span>}
             </h3>
-            <span className="text-[10px] text-neutral-500">
-              {format(block.timestamp, 'MMM d, yyyy HH:mm:ss')}
-            </span>
+            <div className="flex items-center gap-3 mt-0.5">
+               <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-neutral-500 uppercase font-bold">Hash:</span>
+                  <span className="text-[10px] font-mono text-neutral-400">{block.hash.substring(0, 6)}...</span>
+               </div>
+               <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-neutral-500 uppercase font-bold">Prev:</span>
+                  <span className="text-[10px] font-mono text-neutral-400">{block.previousHash.substring(0, 6)}...</span>
+               </div>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              useStore.getState().setSelectedTipId(block.id);
-            }}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-800 hover:text-brand-secondary transition-colors"
-            title="Select/Mine from this block"
-          >
-            <GitBranch className="h-4 w-4" />
-          </button>
-          {!isGenesis && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(!isEditing);
-              }}
-              className={clsx(
-                "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-                isEditing ? "bg-amber-500 text-white" : "text-neutral-500 hover:bg-neutral-800 hover:text-white"
-              )}
-            >
-              <Edit2 className="h-4 w-4" />
-            </button>
-          )}
+
+        <div className="flex items-center gap-2">
+           {!isGenesis && (
+             <button
+               onClick={(e) => {
+                 e.stopPropagation();
+                 setIsEditing(!isEditing);
+                 setIsExpanded(true);
+               }}
+               className={clsx(
+                 "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                 isEditing ? "bg-amber-500 text-white" : "text-neutral-500 hover:bg-neutral-800 hover:text-white"
+               )}
+             >
+               <Edit2 className="h-4 w-4" />
+             </button>
+           )}
+           {isExpanded ? <ChevronUp className="h-5 w-5 text-neutral-600" /> : <ChevronDown className="h-5 w-5 text-neutral-600" />}
         </div>
       </div>
 
-      {/* Block Body */}
-      <div className="p-4 space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500">
-              <Fingerprint className="h-3 w-3" /> Hash
-            </span>
-            <div className="font-mono text-[10px] break-all text-neutral-300 bg-black/30 rounded p-1.5 line-clamp-2">
-              {block.hash}
-            </div>
-          </div>
-          <div className="space-y-1">
-            <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500">
-              <LinkIcon className="h-3 w-3" /> Prev Hash
-            </span>
-            <div className="font-mono text-[10px] break-all text-neutral-300 bg-black/30 rounded p-1.5 line-clamp-2">
-              {block.previousHash}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase tracking-wider text-neutral-500 block">Nonce</span>
-              <span className="text-sm font-mono text-white">{block.nonce}</span>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase tracking-wider text-neutral-500 block">Difficulty</span>
-              <span className="text-sm font-mono text-white">{block.difficulty}</span>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 text-xs font-medium text-brand-secondary hover:underline"
+      {/* Expanded Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-neutral-800/50"
           >
-            {block.transactions.length} Transactions
-            {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          </button>
-        </div>
+            <div className="p-4 space-y-4 bg-black/20" onClick={(e) => e.stopPropagation()}>
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-1">
+                    <span className="text-[10px] uppercase tracking-wider text-neutral-500 block font-bold">Full Hash</span>
+                    <div className="font-mono text-[10px] break-all text-neutral-300 bg-black/40 rounded p-2">
+                      {block.hash}
+                    </div>
+                 </div>
+                 <div className="space-y-1">
+                    <span className="text-[10px] uppercase tracking-wider text-neutral-500 block font-bold">Timestamp</span>
+                    <div className="text-[10px] text-neutral-300 bg-black/40 rounded p-2">
+                      {format(block.timestamp, 'MMM d, HH:mm:ss')}
+                    </div>
+                 </div>
+              </div>
 
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="space-y-2 pt-2">
-                {isEditing ? (
+              <div className="flex items-center gap-6">
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 block font-bold">Nonce</span>
+                  <span className="text-sm font-mono text-white">{block.nonce}</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 block font-bold">Difficulty</span>
+                  <span className="text-sm font-mono text-white">{block.difficulty}</span>
+                </div>
+                {currentLevel === 'completed' && (
+                  <div className="ml-auto">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        useStore.getState().setSelectedTipId(block.id);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 text-[10px] font-bold uppercase tracking-tighter text-neutral-300 hover:text-brand-secondary transition-colors"
+                    >
+                      <GitBranch className="h-3 w-3" /> Mine from here
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                 <span className="text-[10px] uppercase tracking-wider text-neutral-500 block font-bold">Transactions ({block.transactions.length})</span>
+
+                 {isEditing ? (
                   <div className="space-y-3 rounded-xl bg-amber-500/5 p-3 border border-amber-500/20">
                     <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-2">Tampering Mode</p>
                     {tamperedTxs.map((tx, idx) => (
@@ -199,17 +202,17 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
                   </div>
                 )}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
-        {!isValid && error && (
-          <div className="rounded-lg bg-red-500/10 p-2.5 text-[10px] text-red-500 flex items-start gap-2">
-            <X className="h-3 w-3 mt-0.5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
+              {!isValid && error && (
+                <div className="rounded-lg bg-red-500/10 p-2.5 text-[10px] text-red-500 flex items-start gap-2">
+                  <X className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { validatePath, getLongestChainTip } from './blockchain/logic';
 import { Level1Hash } from './components/Level1Hash';
 import { Level2Transactions } from './components/Level2Transactions';
 import { Level3Mining } from './components/Level3Mining';
+import { Level4Chain } from './components/Level4Chain';
 import { VerticalTimeline } from './components/VerticalTimeline';
 import { Home, PlusSquare, Pickaxe, RotateCcw } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -32,28 +33,36 @@ function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'tx' | 'mine'>('home');
 
   const renderContent = () => {
-    if (currentLevel === 'hash') return <Level1Hash />;
-    if (currentLevel === 'transactions') return <Level2Transactions />;
-    if (currentLevel === 'mining') return <Level3Mining />;
-
-    // Level completed: show tabbed interface
-    switch (activeTab) {
-      case 'home':
-        return <VerticalTimeline />;
-      case 'tx':
-        return (
-          <div className="p-4 flex flex-col h-full">
-            <Level2Transactions />
-          </div>
-        );
-      case 'mine':
-        return (
-          <div className="p-4 flex flex-col h-full">
-            <Level3Mining />
-          </div>
-        );
+    switch (currentLevel) {
+      case 'hash':
+        return <Level1Hash />;
+      case 'transactions':
+        return <Level2Transactions />;
+      case 'mining':
+        return <Level3Mining />;
+      case 'chain':
+        return <Level4Chain />;
+      case 'completed':
+        switch (activeTab) {
+          case 'home':
+            return <VerticalTimeline />;
+          case 'tx':
+            return (
+              <div className="p-4 flex flex-col h-full">
+                <Level2Transactions />
+              </div>
+            );
+          case 'mine':
+            return (
+              <div className="p-4 flex flex-col h-full">
+                <Level3Mining />
+              </div>
+            );
+          default:
+            return <VerticalTimeline />;
+        }
       default:
-        return <VerticalTimeline />;
+        return <Level1Hash />;
     }
   };
 
