@@ -278,6 +278,7 @@ export const useStore = create<AppState>()(
             lastCalculatedHash: '',
             hasAddedTransaction: false,
             hasMinedFirstBlock: false,
+            hasTamperedBlock: false,
           }
         });
       },
