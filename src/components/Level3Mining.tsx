@@ -12,7 +12,7 @@ export const Level3Mining: React.FC = () => {
       level="mining"
       title="3. The Mining Race"
       canProgress={hasMinedFirstBlock}
-      onNext={() => setLearningLevel('completed')}
+      onNext={() => setLearningLevel('chain')}
     >
       <ExplainThis
         bullets={[

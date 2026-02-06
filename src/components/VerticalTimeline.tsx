@@ -5,7 +5,11 @@ import { BlockCard } from './BlockCard';
 import { AlertTriangle, ArrowDown } from 'lucide-react';
 import { ExplainThis } from './ExplainThis';
 
-export const VerticalTimeline: React.FC = () => {
+interface VerticalTimelineProps {
+  hideExplanations?: boolean;
+}
+
+export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanations = false }) => {
   const { blocks, tips, selectedTipId } = useStore();
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -34,53 +38,57 @@ export const VerticalTimeline: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto snap-y snap-mandatory pb-32">
-      <div className="px-4 pt-4">
-        <ExplainThis
-          bullets={[
-            "Blocks are linked together: each block contains the hash of the previous one.",
-            "If you change a block, its hash changes, breaking the link to the next block.",
-            "This makes the blockchain immutable—you cannot change the past without breaking the present."
-          ]}
-        />
-      </div>
-      <div className="flex flex-col items-center gap-0">
-        {chainPath.map((block, index) => (
-          <React.Fragment key={block.id}>
-            <div className="w-full min-h-[80vh] flex items-center justify-center p-4 snap-start">
-              <div className="w-full max-w-md">
-                <BlockCard
-                  block={block}
-                  isValid={!validationErrors[block.id]}
-                  error={validationErrors[block.id]}
-                  isGenesis={block.index === 0}
-                />
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 overflow-y-auto snap-y snap-mandatory pb-32">
+        {!hideExplanations && (
+          <div className="px-4 pt-4">
+            <ExplainThis
+              bullets={[
+                "Blocks are linked together: each block contains the hash of the previous one.",
+                "If you change a block, its hash changes, breaking the link to the next block.",
+                "This makes the blockchain immutable—you cannot change the past without breaking the present."
+              ]}
+            />
+          </div>
+        )}
+        <div className="flex flex-col items-center gap-0">
+          {chainPath.map((block, index) => (
+            <React.Fragment key={block.id}>
+              <div className="w-full min-h-[80vh] flex items-center justify-center p-4 snap-start">
+                <div className="w-full max-w-md">
+                  <BlockCard
+                    block={block}
+                    isValid={!validationErrors[block.id]}
+                    error={validationErrors[block.id]}
+                    isGenesis={block.index === 0}
+                  />
 
-                {!validationErrors[block.id] && index < chainPath.length - 1 && (
-                  <div className="mt-8 flex flex-col items-center animate-bounce">
-                    <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-2">Next Block</span>
-                    <ArrowDown className="h-5 w-5 text-neutral-700" />
-                  </div>
-                )}
+                  {!validationErrors[block.id] && index < chainPath.length - 1 && (
+                    <div className="mt-8 flex flex-col items-center animate-bounce">
+                      <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-2">Next Block</span>
+                      <ArrowDown className="h-5 w-5 text-neutral-700" />
+                    </div>
+                  )}
 
-                {validationErrors[block.id] && (
-                  <div className="mt-4 rounded-xl bg-red-500/10 border border-red-500/20 p-4 animate-in fade-in zoom-in duration-300">
-                    <p className="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">Why is this broken?</p>
-                    <p className="text-sm text-neutral-300">
-                      {index > 0 && validationErrors[chainPath[index-1]?.id]
-                        ? "The previous block is invalid, breaking the chain's integrity."
-                        : validationErrors[block.id]}
-                    </p>
-                  </div>
-                )}
+                  {validationErrors[block.id] && (
+                    <div className="mt-4 rounded-xl bg-red-500/10 border border-red-500/20 p-4 animate-in fade-in zoom-in duration-300">
+                      <p className="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">Why is this broken?</p>
+                      <p className="text-sm text-neutral-300">
+                        {index > 0 && validationErrors[chainPath[index-1]?.id]
+                          ? "The previous block is invalid, breaking the chain's integrity."
+                          : validationErrors[block.id]}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {index < chainPath.length - 1 && (
-              <div className="h-12 w-0.5 bg-neutral-800 flex-shrink-0" />
-            )}
-          </React.Fragment>
-        ))}
+              {index < chainPath.length - 1 && (
+                <div className="h-12 w-0.5 bg-neutral-800 flex-shrink-0" />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
       </div>
     </div>
   );

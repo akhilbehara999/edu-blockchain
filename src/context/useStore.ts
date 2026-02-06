@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Block, Transaction, BlockchainState } from '../blockchain/types';
 import { createGenesisBlock } from '../blockchain/logic';
 
-export type LearningLevel = 'hash' | 'transactions' | 'mining' | 'completed';
+export type LearningLevel = 'hash' | 'transactions' | 'mining' | 'chain' | 'completed';
 
 interface AppState extends BlockchainState {
   mempool: Transaction[];
@@ -15,6 +15,7 @@ interface AppState extends BlockchainState {
   hasChangedHashInput: boolean;
   hasAddedTransaction: boolean;
   hasMinedFirstBlock: boolean;
+  hasTamperedBlock: boolean;
 
   // Actions
   addTransaction: (tx: Omit<Transaction, 'id' | 'timestamp'>) => void;
@@ -45,6 +46,7 @@ export const useStore = create<AppState>()(
       hasChangedHashInput: false,
       hasAddedTransaction: false,
       hasMinedFirstBlock: false,
+      hasTamperedBlock: false,
 
       initialize: async () => {
         const { genesisId } = get();
@@ -115,7 +117,8 @@ export const useStore = create<AppState>()(
           blocks: {
             ...state.blocks,
             [id]: tamperedBlock
-          }
+          },
+          hasTamperedBlock: true
         }));
       },
 
@@ -142,6 +145,7 @@ export const useStore = create<AppState>()(
           hasChangedHashInput: false,
           hasAddedTransaction: false,
           hasMinedFirstBlock: false,
+          hasTamperedBlock: false,
           blocks: {},
           tips: [],
           genesisId: '',

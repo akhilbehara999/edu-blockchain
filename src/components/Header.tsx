@@ -43,7 +43,10 @@ export const Header: React.FC<HeaderProps> = ({ isValid }) => {
 
           {currentLevel !== 'completed' && (
              <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest border-l border-neutral-800 pl-3">
-               Level {currentLevel === 'hash' ? 1 : currentLevel === 'transactions' ? 2 : 3}/3
+               {currentLevel === 'hash' && 'Step 1/4'}
+               {currentLevel === 'transactions' && 'Step 2/4'}
+               {currentLevel === 'mining' && 'Step 3/4'}
+               {currentLevel === 'chain' && 'Step 4/4'}
              </div>
           )}
         </div>
