@@ -3,7 +3,7 @@ import type { Block, Transaction } from '../blockchain/types';
 import type { BlockValidationError } from '../blockchain/logic';
 import { useStore } from '../context/useStore';
 import { format } from 'date-fns';
-import { Edit2, Check, X, ChevronDown, ChevronUp, GitBranch, Info, Terminal } from 'lucide-react';
+import { Edit2, Check, X, ChevronDown, ChevronUp, GitBranch, Info, Terminal, Lock } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,7 +19,7 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
   const { currentLevel } = progress;
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showTechnical, setShowTechnical] = useState(false);
+  const [showTechnical, setShowTechnical] = useState(currentLevel === 'completed');
   const [tamperedTxs, setTamperedTxs] = useState<Transaction[]>(block.transactions);
   const [isShaking, setIsShaking] = useState(false);
 
@@ -44,27 +44,30 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
         boxShadow: ["0 0 0 rgba(239, 68, 68, 0)", "0 0 40px rgba(239, 68, 68, 0.5)", "0 0 0 rgba(239, 68, 68, 0)"]
       } : {}}
       transition={{ duration: 0.5 }}
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={() => !isGenesis && setIsExpanded(!isExpanded)}
       className={clsx(
-      "group relative flex flex-col rounded-2xl border transition-all duration-300 cursor-pointer",
-      isValid
-        ? "border-neutral-800 bg-neutral-900/40"
-        : "border-orange-500/50 bg-orange-950/10"
+      "group relative flex flex-col rounded-2xl border transition-all duration-300",
+      !isGenesis && "cursor-pointer",
+      isGenesis
+        ? "border-neutral-800 bg-neutral-900/20 grayscale"
+        : isValid
+          ? "border-neutral-800 bg-neutral-900/40"
+          : "border-orange-500/50 bg-orange-950/10"
     )}>
       {/* Block Header (Always Visible) */}
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
           <div className={clsx(
             "flex h-10 w-10 items-center justify-center rounded-xl text-sm font-black",
-            isValid ? "bg-neutral-800 text-neutral-400" : "bg-orange-500 text-white"
+            isGenesis ? "bg-neutral-900 text-neutral-600" : isValid ? "bg-neutral-800 text-neutral-400" : "bg-orange-500 text-white"
           )}>
-            {block.index}
+            {isGenesis ? <Lock className="h-4 w-4" /> : block.index}
           </div>
           <div className="flex flex-col">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              {isGenesis ? 'Genesis' : `Block #${block.index}`}
-              {!isValid && <span className="text-[10px] bg-orange-500/20 text-orange-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">Broken</span>}
-              {isValid && <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">Valid</span>}
+              {isGenesis ? 'Genesis Block' : `Block #${block.index}`}
+              {!isGenesis && !isValid && <span className="text-[10px] bg-orange-500/20 text-orange-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">Broken</span>}
+              {!isGenesis && isValid && <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">Valid</span>}
             </h3>
             <div className="flex items-center gap-3 mt-0.5">
                <div className="flex items-center gap-1">
@@ -76,7 +79,7 @@ export const BlockCard: React.FC<BlockCardProps> = ({ block, isValid, error, isG
         </div>
 
         <div className="flex items-center gap-2">
-           {isExpanded ? <ChevronUp className="h-5 w-5 text-neutral-600" /> : <ChevronDown className="h-5 w-5 text-neutral-600" />}
+           {!isGenesis && (isExpanded ? <ChevronUp className="h-5 w-5 text-neutral-600" /> : <ChevronDown className="h-5 w-5 text-neutral-600" />)}
         </div>
       </div>
 

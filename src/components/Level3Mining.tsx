@@ -6,7 +6,8 @@ import { MiningPanel } from './MiningPanel';
 
 export const Level3Mining: React.FC = () => {
   const { setLearningLevel, progress } = useStore();
-  const { hasMinedFirstBlock } = progress;
+  const { hasMinedFirstBlock, currentLevel } = progress;
+  const isCompleted = currentLevel === 'completed';
 
   return (
     <LevelWizard
@@ -26,7 +27,7 @@ export const Level3Mining: React.FC = () => {
       <div className="space-y-6">
         <MiningPanel />
 
-        {!hasMinedFirstBlock && (
+        {!isCompleted && !hasMinedFirstBlock && (
           <p className="text-center text-sm text-neutral-500 italic">
             Find a valid hash to mine your first block
           </p>

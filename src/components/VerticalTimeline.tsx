@@ -12,9 +12,10 @@ interface VerticalTimelineProps {
 }
 
 export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanations = false }) => {
-  const { blocks, tips, selectedTipId, difficulty, validationErrors, firstInvalidBlockId: firstInvalidId } = useStore();
+  const { blocks, tips, selectedTipId, difficulty, validationErrors, firstInvalidBlockId: firstInvalidId, isValid } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const blockRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const prevIsValidRef = useRef(isValid);
 
   const chainPath = useMemo(() => {
     const tipId = selectedTipId || getLongestChainTip({ blocks, tips });
@@ -22,14 +23,15 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
   }, [blocks, tips, selectedTipId]);
 
   useEffect(() => {
-    // Auto-scroll to the first invalid block
-    if (firstInvalidId && blockRefs.current[firstInvalidId]) {
+    // Auto-scroll to the first invalid block ONLY when chain transitions from valid -> invalid
+    if (prevIsValidRef.current && !isValid && firstInvalidId && blockRefs.current[firstInvalidId]) {
       blockRefs.current[firstInvalidId]?.scrollIntoView({
         behavior: 'smooth',
         block: 'center'
       });
     }
-  }, [firstInvalidId]);
+    prevIsValidRef.current = isValid;
+  }, [isValid, firstInvalidId]);
 
   if (chainPath.length === 0) {
     return (
@@ -72,9 +74,9 @@ export const VerticalTimeline: React.FC<VerticalTimelineProps> = ({ hideExplanat
                   <motion.div
                     animate={isFirstInvalid ? {
                       x: [0, -10, 10, -10, 10, 0],
-                      backgroundColor: ["rgba(0,0,0,0)", "rgba(239, 68, 68, 0.1)", "rgba(0,0,0,0)"]
+                      backgroundColor: ["rgba(0,0,0,0)", "rgba(239, 68, 68, 0.2)", "rgba(0,0,0,0)"]
                     } : {}}
-                    transition={{ duration: 0.5, repeat: isFirstInvalid ? Infinity : 0, repeatDelay: 2 }}
+                    transition={{ duration: 0.5, repeat: isFirstInvalid ? 2 : 0, repeatDelay: 1 }}
                     className="w-full max-w-md"
                   >
                     <BlockCard

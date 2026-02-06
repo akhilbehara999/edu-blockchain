@@ -1,5 +1,5 @@
 import React from 'react';
-import type { LearningLevel } from '../context/useStore';
+import { type LearningLevel, useStore } from '../context/useStore';
 import { ArrowRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -17,21 +17,26 @@ export const LevelWizard: React.FC<LevelWizardProps> = ({
   onNext,
   children,
 }) => {
+  const currentLevel = useStore(state => state.progress.currentLevel);
+  const isCompleted = currentLevel === 'completed';
+
   const handleNext = () => {
     onNext();
   };
 
   return (
     <div className="flex flex-col h-full px-4 py-6">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-white">{title}</h2>
-      </div>
+      {!isCompleted && (
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-white">{title}</h2>
+        </div>
+      )}
 
       <div className="flex-1">
         {children}
       </div>
 
-      {canProgress && (
+      {!isCompleted && canProgress && (
         <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <button
             onClick={handleNext}

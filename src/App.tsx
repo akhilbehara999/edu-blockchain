@@ -13,7 +13,17 @@ import { Home, PlusSquare, Pickaxe, RotateCcw } from 'lucide-react';
 import { clsx } from 'clsx';
 
 function App() {
-  const { initialize, progress, resetLearningProgress, genesisId, isValid } = useStore();
+  const {
+    initialize,
+    progress,
+    resetLearningProgress,
+    genesisId,
+    isValid,
+    blocks,
+    difficulty,
+    selectedTipId,
+    updateChainValidity
+  } = useStore();
   const { currentLevel } = progress;
   const { isMining } = useMining();
   const prevLevelRef = useRef(currentLevel);
@@ -21,6 +31,11 @@ function App() {
   useEffect(() => {
     initialize();
   }, [initialize, genesisId]);
+
+  // Centralized Validation Watcher
+  useEffect(() => {
+    updateChainValidity();
+  }, [blocks, difficulty, selectedTipId, updateChainValidity]);
 
   useEffect(() => {
     if (prevLevelRef.current !== currentLevel) {
