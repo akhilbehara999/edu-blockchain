@@ -1,6 +1,6 @@
 import type { Block, BlockId, BlockMap, BlockchainState } from './types';
 import { calculateBlockHash } from './crypto';
-import { isGenesisBlock, validateGenesisBlock, createGenesisBlock as createGenesis } from './genesis';
+import { isGenesisBlock, createGenesisBlock as createGenesis } from './genesis';
 
 export async function createGenesisBlock(): Promise<Block> {
   return createGenesis();

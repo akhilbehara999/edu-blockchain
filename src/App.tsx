@@ -3,7 +3,6 @@ import { useStore } from './context/useStore';
 import { Header } from './components/Header';
 import { useMining } from './hooks/useMining';
 import confetti from 'canvas-confetti';
-import { validatePath, getLongestChainTip } from './blockchain/logic';
 import { Level1Hash } from './components/Level1Hash';
 import { Level2Transactions } from './components/Level2Transactions';
 import { Level3Mining } from './components/Level3Mining';

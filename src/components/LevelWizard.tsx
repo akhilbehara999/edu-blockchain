@@ -1,7 +1,6 @@
 import React from 'react';
 import { type LearningLevel, useStore } from '../context/useStore';
 import { ArrowRight } from 'lucide-react';
-import confetti from 'canvas-confetti';
 
 interface LevelWizardProps {
   level: LearningLevel;

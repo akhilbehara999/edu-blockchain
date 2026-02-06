@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useStore } from '../context/useStore';
 import { useMining } from '../hooks/useMining';
-import { validateBlock } from '../blockchain/logic';
 import { Pickaxe, Database, AlertCircle, Settings2 } from 'lucide-react';
 import { clsx } from 'clsx';
 

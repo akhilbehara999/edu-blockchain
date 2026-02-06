@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ isValid }) => {
-  const { currentLevel } = useStore();
+  const { progress: { currentLevel } } = useStore();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md">
